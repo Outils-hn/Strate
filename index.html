@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strate</title>
+<meta name="description" content="Combinaisons d'epaisseurs d'isolation pour atteindre une epaisseur cible">
+<style>
+  :root {
+    --bg: #f4f2ee;
+    --card: #ffffff;
+    --ink: #1f1e1c;
+    --muted: #6b6963;
+    --line: #dcd8d0;
+    --accent: #c2410c;
+    --accent-soft: #fbe7dc;
+    --ok: #15803d;
+    --ok-soft: #e3f3e8;
+    --layer-a: #f2c94c;
+    --layer-b: #e8a33d;
+    --layer-c: #d9822b;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161514;
+      --card: #211f1d;
+      --ink: #f0ede8;
+      --muted: #a29f98;
+      --line: #3a3733;
+      --accent: #fb923c;
+      --accent-soft: #3b2417;
+      --ok: #4ade80;
+      --ok-soft: #173322;
+      --layer-a: #b8932f;
+      --layer-b: #a87526;
+      --layer-c: #965c1f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  header {
+    padding: 20px 16px 8px;
+    max-width: 880px;
+    margin: 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: 0.5px; }
+  header p { margin: 0; color: var(--muted); }
+  main { max-width: 880px; margin: 0 auto; padding: 8px 16px 40px; display: grid; gap: 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 17px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tab {
+    flex: 1;
+    padding: 9px 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    border-radius: var(--radius);
+    font: inherit;
+    cursor: pointer;
+  }
+  .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  input, select {
+    font: inherit;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    width: 100%;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .chip {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    user-select: none;
+    background: transparent;
+    color: var(--ink);
+  }
+  .chip.on { background: var(--accent-soft); border-color: var(--accent); }
+  .chip.off { opacity: 0.45; text-decoration: line-through; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  button.btn {
+    font: inherit;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .results { display: grid; gap: 10px; }
+  .combo {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px;
+    display: grid;
+    gap: 8px;
+  }
+  .combo.best { border-color: var(--ok); background: var(--ok-soft); }
+  .combo-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+  .combo-title { font-weight: 600; font-size: 16px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--ok); color: #fff; margin-left: 6px; }
+  .stack { display: flex; height: 26px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+  .stack div {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #1f1e1c; white-space: nowrap; overflow: hidden;
+    border-right: 1px solid rgba(0,0,0,0.25);
+  }
+  .stack div:last-child { border-right: none; }
+  .empty { color: var(--muted); font-style: italic; }
+  .nearest { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { .nearest { grid-template-columns: 1fr; } }
+  .big { font-size: 24px; font-weight: 600; }
+  .hidden { display: none; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Strate</h1>
+  <p>Combinaisons d'épaisseurs d'isolation</p>
+</header>
+
+<main>
+  <!-- Catalogue -->
+  <section class="card">
+    <h2>Catalogue</h2>
+    <div class="grid">
+      <label>Produit
+        <select id="productSelect"></select>
+      </label>
+      <label>Type
+        <select id="productType">
+          <option value="souple">Souple</option>
+          <option value="semi-rigide">Semi-rigide</option>
+          <option value="rigide">Rigide</option>
+        </select>
+      </label>
+      <label>λ (W/m·K)
+        <input id="productLambda" type="number" step="0.001" min="0">
+      </label>
+    </div>
+    <p class="hint">Épaisseurs disponibles (mm) — touche une épaisseur pour l'activer ou la désactiver.</p>
+    <div class="chips" id="thicknessChips"></div>
+    <div class="row">
+      <input id="newThickness" type="number" min="1" placeholder="Ajouter (mm)" style="max-width:150px">
+      <button class="btn" id="addThicknessBtn">Ajouter</button>
+      <button class="btn" id="removeThicknessBtn">Retirer les désactivées</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="newProductBtn">Nouveau produit</button>
+      <button class="btn" id="renameProductBtn">Renommer</button>
+      <button class="btn" id="deleteProductBtn">Supprimer</button>
+      <button class="btn" id="resetBtn">Réinitialiser</button>
+    </div>
+  </section>
+
+  <!-- Calcul -->
+  <section class="card">
+    <div class="tabs">
+      <button class="tab active" data-mode="combo">Combinaisons</button>
+      <button class="tab" data-mode="inverse">Épaisseur la plus proche</button>
+    </div>
+
+    <div class="grid">
+      <label>Épaisseur cible (mm)
+        <input id="target" type="number" min="1" value="220">
+      </label>
+      <label>Couches max.
+        <select id="maxLayers">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select>
+      </label>
+      <label class="combo-only">Tolérance − (mm)
+        <input id="tolMinus" type="number" min="0" value="0">
+      </label>
+      <label class="combo-only">Tolérance + (mm)
+        <input id="tolPlus" type="number" min="0" value="10">
+      </label>
+    </div>
+    <p class="hint" id="typeHint"></p>
+  </section>
+
+  <!-- Resultats -->
+  <section class="card">
+    <h2 id="resultsTitle">Résultats</h2>
+    <div id="results" class="results"></div>
+  </section>
+</main>
+
+<footer>Strate · V1</footer>
+
+<script>
+// ===== Catalogue par defaut =====
+// Isover Suisse, ISORESIST 1000 031 F : plaque facade ventilee, ~40 kg/m3
+const DEFAULT_PRODUCTS = [
+  {
+    id: "isoresist-1000-031-f",
+    name: "Isover ISORESIST 1000 031 F",
+    type: "semi-rigide",
+    lambda: 0.031,
+    thicknesses: [40, 60, 80, 100, 120, 140, 160, 180, 200].map(t => ({ t, on: true }))
+  }
+];
+
+const STORAGE_KEY = "strate.v1";
+const $ = id => document.getElementById(id);
+
+// ===== Etat + sauvegarde navigateur =====
+// localStorage peut etre bloque (navigation privee) : on protege toujours par try/catch
+let state = loadState();
+let mode = "combo";
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && Array.isArray(s.products) && s.products.length) return s;
+    }
+  } catch (e) {}
+  return { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {} };
+}
+
+function saveState() {
+  state.inputs = {
+    target: $("target").value, maxLayers: $("maxLayers").value,
+    tolMinus: $("tolMinus").value, tolPlus: $("tolPlus").value, mode
+  };
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function currentProduct() {
+  return state.products.find(p => p.id === state.currentId) || state.products[0];
+}
+
+// ===== Coeur du calcul =====
+// Enumere toutes les combinaisons de 1 a maxLayers couches (repetition permise,
+// ex. 2 x 100). On genere en ordre decroissant pour eviter les doublons
+// (120+100 et 100+120 sont la meme combinaison).
+function allCombos(thicknesses, maxLayers) {
+  const list = [...new Set(thicknesses)].sort((a, b) => b - a);
+  const out = [];
+  function rec(start, current) {
+    if (current.length) out.push([...current]);
+    if (current.length === maxLayers) return;
+    for (let i = start; i < list.length; i++) {
+      current.push(list[i]);
+      rec(i, current);
+      current.pop();
+    }
+  }
+  rec(0, []);
+  return out.map(layers => ({ layers, total: layers.reduce((a, b) => a + b, 0) }));
+}
+
+// Tri : d'abord le moins de couches, puis le plus petit ecart a la cible,
+// puis on prefere etre au-dessus plutot qu'en dessous, puis le moins de references differentes
+function sortCombos(combos, target) {
+  return combos.sort((a, b) =>
+    a.layers.length - b.layers.length ||
+    Math.abs(a.total - target) - Math.abs(b.total - target) ||
+    (b.total >= target) - (a.total >= target) ||
+    new Set(a.layers).size - new Set(b.layers).size ||
+    spread(a.layers) - spread(b.layers)
+  );
+}
+
+// Ecart entre la couche la plus epaisse et la plus fine : on prefere
+// 120 + 100 a 180 + 40 (une couche tres fine est penible a poser)
+function spread(layers) {
+  return Math.max(...layers) - Math.min(...layers);
+}
+
+// ===== Affichage =====
+function renderCatalog() {
+  const sel = $("productSelect");
+  sel.innerHTML = state.products.map(p =>
+    `<option value="${p.id}" ${p.id === state.currentId ? "selected" : ""}>${escapeHtml(p.name)}</option>`
+  ).join("");
+  const p = currentProduct();
+  $("productType").value = p.type;
+  $("productLambda").value = p.lambda ?? "";
+  const chips = [...p.thicknesses].sort((a, b) => a.t - b.t);
+  $("thicknessChips").innerHTML = chips.length
+    ? chips.map(c => `<button class="chip ${c.on ? "on" : "off"}" data-t="${c.t}">${c.t}</button>`).join("")
+    : `<span class="empty">Aucune épaisseur — ajoutes-en une.</span>`;
+  renderTypeHint();
+}
+
+function renderTypeHint() {
+  const p = currentProduct();
+  const hints = {
+    "souple": "Produit souple : il se comprime un peu, une tolérance de quelques mm en moins est souvent acceptable.",
+    "semi-rigide": "Produit semi-rigide : il se comprime peu, reste prudent avec la tolérance en moins.",
+    "rigide": "Produit rigide : aucune compression possible, vise juste ou légèrement au-dessus."
+  };
+  $("typeHint").textContent = hints[p.type] || "";
+}
+
+function layerColors(layers) {
+  // Une couleur par epaisseur differente pour bien distinguer les couches
+  const palette = ["var(--layer-a)", "var(--layer-b)", "var(--layer-c)"];
+  const distinct = [...new Set(layers)];
+  return layers.map(t => palette[distinct.indexOf(t) % palette.length]);
+}
+
+function stackHtml(layers) {
+  const total = layers.reduce((a, b) => a + b, 0);
+  const colors = layerColors(layers);
+  return `<div class="stack">${layers.map((t, i) =>
+    `<div style="width:${(t / total) * 100}%;background:${colors[i]}">${t}</div>`
+  ).join("")}</div>`;
+}
+
+function comboLabel(layers) {
+  // Regroupe les couches identiques : 100 + 100 -> 2 x 100
+  const counts = {};
+  layers.forEach(t => counts[t] = (counts[t] || 0) + 1);
+  return Object.keys(counts).map(Number).sort((a, b) => b - a)
+    .map(t => counts[t] > 1 ? `${counts[t]} × ${t}` : `${t}`).join(" + ");
+}
+
+function rValue(total) {
+  const lambda = Number(currentProduct().lambda);
+  if (!lambda) return "";
+  return ` · R = ${(total / 1000 / lambda).toFixed(2)} m²K/W`;
+}
+
+function diffLabel(total, target) {
+  const d = total - target;
+  if (d === 0) return "pile la cible";
+  return d > 0 ? `+${d} mm` : `${d} mm`;
+}
+
+function comboCard(c, target, best) {
+  return `<div class="combo ${best ? "best" : ""}">
+    <div class="combo-head">
+      <span class="combo-title">${comboLabel(c.layers)} mm${best ? '<span class="badge">Meilleure</span>' : ""}</span>
+      <span class="meta">${c.total} mm · ${diffLabel(c.total, target)} · ${c.layers.length} couche${c.layers.length > 1 ? "s" : ""}${rValue(c.total)}</span>
+    </div>
+    ${stackHtml(c.layers)}
+  </div>`;
+}
+
+function renderResults() {
+  const p = currentProduct();
+  const thick = p.thicknesses.filter(x => x.on).map(x => x.t);
+  const target = Number($("target").value);
+  const maxLayers = Number($("maxLayers").value);
+  const res = $("results");
+
+  if (!thick.length) { res.innerHTML = `<p class="empty">Active au moins une épaisseur dans le catalogue.</p>`; return; }
+  if (!target || target <= 0) { res.innerHTML = `<p class="empty">Saisis une épaisseur cible.</p>`; return; }
+
+  const combos = allCombos(thick, maxLayers);
+
+  if (mode === "combo") {
+    $("resultsTitle").textContent = "Combinaisons possibles";
+    const lo = target - Number($("tolMinus").value || 0);
+    const hi = target + Number($("tolPlus").value || 0);
+    const ok = sortCombos(combos.filter(c => c.total >= lo && c.total <= hi), target).slice(0, 8);
+    if (!ok.length) {
+      res.innerHTML = `<p class="empty">Aucune combinaison dans la tolérance (${lo} à ${hi} mm).</p>` + nearestHtml(combos, target);
+      return;
+    }
+    res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0)).join("");
+  } else {
+    $("resultsTitle").textContent = "Épaisseur réalisable la plus proche";
+    res.innerHTML = nearestHtml(combos, target);
+  }
+}
+
+// Mode inverse : plus proche en dessous et au-dessus de l'epaisseur dessinee
+// (a total egal, on garde la combinaison avec le moins de couches)
+function nearestHtml(combos, target) {
+  const below = sortCombos(combos.filter(c => c.total <= target), target)
+    .sort((a, b) => b.total - a.total || a.layers.length - b.layers.length)[0];
+  const above = sortCombos(combos.filter(c => c.total >= target), target)
+    .sort((a, b) => a.total - b.total || a.layers.length - b.layers.length)[0];
+  const block = (c, label) => c
+    ? `<div class="combo ${c.total === target ? "best" : ""}">
+         <span class="meta">${label}</span>
+         <span class="big">${c.total} mm</span>
+         <span class="meta">${comboLabel(c.layers)} mm · ${diffLabel(c.total, target)}${rValue(c.total)}</span>
+         ${stackHtml(c.layers)}
+       </div>`
+    : `<div class="combo"><span class="meta">${label}</span><span class="empty">Rien de réalisable</span></div>`;
+  return `<div class="nearest">${block(below, "En dessous")}${block(above, "Au-dessus")}</div>`;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function refresh() { renderCatalog(); renderResults(); saveState(); }
+
+// ===== Evenements =====
+$("productSelect").addEventListener("change", e => { state.currentId = e.target.value; refresh(); });
+$("productType").addEventListener("change", e => { currentProduct().type = e.target.value; refresh(); });
+$("productLambda").addEventListener("input", e => { currentProduct().lambda = Number(e.target.value) || null; renderResults(); saveState(); });
+
+$("thicknessChips").addEventListener("click", e => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  const t = Number(chip.dataset.t);
+  const item = currentProduct().thicknesses.find(x => x.t === t);
+  if (item) item.on = !item.on;
+  refresh();
+});
+
+$("addThicknessBtn").addEventListener("click", () => {
+  const t = Math.round(Number($("newThickness").value));
+  if (!t || t <= 0) return;
+  const p = currentProduct();
+  if (!p.thicknesses.some(x => x.t === t)) p.thicknesses.push({ t, on: true });
+  $("newThickness").value = "";
+  refresh();
+});
+$("newThickness").addEventListener("keydown", e => { if (e.key === "Enter") $("addThicknessBtn").click(); });
+
+$("removeThicknessBtn").addEventListener("click", () => {
+  const p = currentProduct();
+  p.thicknesses = p.thicknesses.filter(x => x.on);
+  refresh();
+});
+
+$("newProductBtn").addEventListener("click", () => {
+  const name = prompt("Nom du produit (ex. Flumroc Dämmplatte 3) :");
+  if (!name) return;
+  const raw = prompt("Épaisseurs disponibles en mm, séparées par des virgules :", "40, 60, 80, 100, 120");
+  const list = (raw || "").split(/[,;\s]+/).map(Number).filter(n => n > 0);
+  const id = "p" + Date.now();
+  state.products.push({ id, name, type: "semi-rigide", lambda: null, thicknesses: [...new Set(list)].map(t => ({ t, on: true })) });
+  state.currentId = id;
+  refresh();
+});
+
+$("renameProductBtn").addEventListener("click", () => {
+  const p = currentProduct();
+  const name = prompt("Nouveau nom :", p.name);
+  if (name) { p.name = name; refresh(); }
+});
+
+$("deleteProductBtn").addEventListener("click", () => {
+  if (state.products.length <= 1) { alert("Il faut garder au moins un produit."); return; }
+  const p = currentProduct();
+  if (!confirm(`Supprimer « ${p.name} » ?`)) return;
+  state.products = state.products.filter(x => x.id !== p.id);
+  state.currentId = state.products[0].id;
+  refresh();
+});
+
+$("resetBtn").addEventListener("click", () => {
+  if (!confirm("Revenir au catalogue d'origine ? Tes produits ajoutés seront perdus.")) return;
+  state = { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {} };
+  refresh();
+});
+
+document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.mode === m));
+  // La tolerance ne sert qu'au mode combinaisons
+  document.querySelectorAll(".combo-only").forEach(el => el.classList.toggle("hidden", m !== "combo"));
+  renderResults();
+  saveState();
+}
+
+["target", "maxLayers", "tolMinus", "tolPlus"].forEach(id =>
+  $(id).addEventListener("input", () => { renderResults(); saveState(); })
+);
+
+// ===== Demarrage : on restaure les dernieres saisies =====
+const inp = state.inputs || {};
+if (inp.target) $("target").value = inp.target;
+if (inp.maxLayers) $("maxLayers").value = inp.maxLayers;
+if (inp.tolMinus !== undefined && inp.tolMinus !== "") $("tolMinus").value = inp.tolMinus;
+if (inp.tolPlus !== undefined && inp.tolPlus !== "") $("tolPlus").value = inp.tolPlus;
+renderCatalog();
+setMode(inp.mode || "combo");
+</script>
+</body>
+</html>
