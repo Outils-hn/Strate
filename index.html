@@ -20,6 +20,9 @@
     --layer-b: #e8a33d;
     --layer-c: #d9822b;
     --radius: 10px;
+    --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%236b6963' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    /* Indique au navigateur le theme : menus, barres de defilement et cases a cocher suivent */
+    color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -35,6 +38,8 @@
       --layer-a: #b8932f;
       --layer-b: #a87526;
       --layer-c: #965c1f;
+      --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23a29f98' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      color-scheme: dark;
     }
   }
   * { box-sizing: border-box; }
@@ -56,6 +61,18 @@
   header h1 { margin: 0; font-size: 26px; letter-spacing: 0.5px; }
   header p { margin: 0; color: var(--muted); }
   main { max-width: 880px; margin: 0 auto; padding: 8px 16px 40px; display: grid; gap: 16px; }
+  /* Telephone : une seule colonne, dans l'ordre calcul > resultats > commande > catalogue > sauvegarde */
+  .col-main, .col-side { display: contents; }
+  #orderCard { order: 3; }
+  #catalogCard { order: 4; }
+  #backupCard { order: 5; }
+  /* Sur grand ecran : calcul a gauche, commande a droite (toujours visible) */
+  @media (min-width: 1100px) {
+    header, main { max-width: 1320px; }
+    main { grid-template-columns: minmax(0, 1.25fr) minmax(400px, 1fr); align-items: start; }
+    .col-main, .col-side { display: grid; gap: 16px; align-content: start; min-width: 0; }
+    .col-side { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-y: auto; padding-right: 2px; }
+  }
   .card {
     background: var(--card);
     border: 1px solid var(--line);
@@ -86,6 +103,18 @@
     padding: 8px 10px;
     width: 100%;
   }
+  /* Menus deroulants dessines par l'appli (sinon chaque navigateur impose son style) */
+  select {
+    -webkit-appearance: none; appearance: none;
+    background-image: var(--arrow); background-repeat: no-repeat;
+    background-position: right 11px center; padding-right: 32px;
+    cursor: pointer;
+  }
+  select option { background: var(--card); color: var(--ink); }
+  /* Pas de petites fleches haut/bas dans les champs numeriques */
+  input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
   .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
@@ -182,6 +211,7 @@
 </header>
 
 <main>
+  <div class="col-main">
   <!-- Calcul (en premier : c'est ce qu'on utilise le plus) -->
   <section class="card">
     <label>Produit
@@ -238,34 +268,6 @@
       </label>
     </div>
     <div id="results" class="results"></div>
-  </section>
-
-  <!-- Commande -->
-  <section class="card" id="orderCard">
-    <h2>Commande</h2>
-    <div class="row" style="margin-top:0; margin-bottom:8px">
-      <select id="orderSelect" style="flex:1; min-width:160px"></select>
-      <button class="btn small" id="newOrderBtn">Nouvelle</button>
-      <button class="btn small" id="renameOrderBtn">Renommer</button>
-      <button class="btn small ghost" id="deleteOrderBtn">Supprimer</button>
-    </div>
-    <div id="orderLines"></div>
-    <div id="orderSummary"></div>
-    <div id="orderActions">
-      <label style="max-width:140px; margin-top:12px">Chute (%)
-        <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric">
-      </label>
-      <div class="row">
-        <button class="btn primary" id="copyExcelBtn">Copier pour Excel</button>
-        <button class="btn" id="copyRecapBtn">Copier le récap</button>
-      </div>
-      <p class="hint" id="excelHint"></p>
-      <div class="row">
-        <button class="btn small ghost" id="copyAllBtn">Tout recopier</button>
-        <button class="btn small ghost" id="copyOrderBtn">Texte pour mail</button>
-        <button class="btn small ghost" id="clearOrderBtn">Vider</button>
-      </div>
-    </div>
   </section>
 
   <!-- Catalogue (replie par defaut : on y touche rarement) -->
@@ -346,7 +348,7 @@
   </details>
 
   <!-- Sauvegarde : tout est dans le navigateur, donc on permet d'exporter un fichier -->
-  <section class="card">
+  <section class="card" id="backupCard">
     <h2>Sauvegarde</h2>
     <p class="hint" style="margin-top:0" id="backupHint"></p>
     <div class="row">
@@ -355,9 +357,40 @@
       <input type="file" id="restoreFile" accept=".json,application/json" class="hidden">
     </div>
   </section>
+  </div>
+
+  <div class="col-side">
+  <!-- Commande -->
+  <section class="card" id="orderCard">
+    <h2>Commande</h2>
+    <div class="row" style="margin-top:0; margin-bottom:8px">
+      <select id="orderSelect" style="flex:1; min-width:160px"></select>
+      <button class="btn small" id="newOrderBtn">Nouvelle</button>
+      <button class="btn small" id="renameOrderBtn">Renommer</button>
+      <button class="btn small ghost" id="deleteOrderBtn">Supprimer</button>
+    </div>
+    <div id="orderLines"></div>
+    <div id="orderSummary"></div>
+    <div id="orderActions">
+      <label style="max-width:140px; margin-top:12px">Chute (%)
+        <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric">
+      </label>
+      <div class="row">
+        <button class="btn primary" id="copyExcelBtn">Copier pour Excel</button>
+        <button class="btn" id="copyRecapBtn">Copier le récap</button>
+      </div>
+      <p class="hint" id="excelHint"></p>
+      <div class="row">
+        <button class="btn small ghost" id="copyAllBtn">Tout recopier</button>
+        <button class="btn small ghost" id="copyOrderBtn">Texte pour mail</button>
+        <button class="btn small ghost" id="clearOrderBtn">Vider</button>
+      </div>
+    </div>
+  </section>
+  </div>
 </main>
 
-<footer>Strate · V5</footer>
+<footer>Strate · V6</footer>
 <div class="toast" id="toast"></div>
 
 <!-- Fenetre de dialogue maison (remplace les fenetres grises du navigateur) -->
@@ -599,7 +632,7 @@ function priceTag(c) {
   return c.price != null ? `<span class="price-tag">${fmt(c.price)} CHF/m²</span>` : "";
 }
 
-function comboCard(c, target, best, showR, badge = "Meilleure") {
+function comboCard(c, target, best, showR, badge = "Recommandée") {
   const r = showR ? rText(c.total) : "";
   return `<div class="combo ${best ? "best" : ""}">
     <div class="combo-head">
@@ -639,7 +672,7 @@ function renderResults() {
     // Si toutes les combinaisons ont la meme epaisseur, R est identique : on l'affiche une seule fois
     const sameTotal = new Set(ok.map(c => c.total)).size === 1;
     if (sameTotal) $("resultsMeta").textContent = `Toutes à ${ok[0].total} mm${rText(ok[0].total) ? " · " + rText(ok[0].total) : ""}`;
-    res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0, !sameTotal, byPrice ? "Moins chère" : "Meilleure")).join("");
+    res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0, !sameTotal, byPrice ? "Moins chère" : "Recommandée")).join("");
   } else {
     $("resultsTitle").textContent = "Épaisseur réalisable la plus proche";
     res.innerHTML = nearestHtml(combos, target);
