@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Strate</title>
-<meta name="description" content="Combinaisons d'epaisseurs d'isolation pour atteindre une epaisseur cible">
+<meta name="description" content="Combinaisons d'epaisseurs d'isolation et commande">
 <style>
   :root {
     --bg: #f4f2ee;
@@ -75,7 +75,7 @@
     cursor: pointer;
   }
   .tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
   label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
   input, select {
     font: inherit;
@@ -87,21 +87,10 @@
     width: 100%;
   }
   input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
   .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .chip {
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 13px;
-    cursor: pointer;
-    user-select: none;
-    background: transparent;
-    color: var(--ink);
-  }
-  .chip.on { background: var(--accent-soft); border-color: var(--accent); }
-  .chip.off { opacity: 0.45; text-decoration: line-through; }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .product-name { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; align-items: center; }
   button.btn {
     font: inherit;
     padding: 8px 12px;
@@ -111,8 +100,12 @@
     color: var(--ink);
     cursor: pointer;
   }
+  button.btn.small { padding: 5px 10px; font-size: 13px; }
   button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.btn.ghost { border-color: transparent; color: var(--muted); }
+  button.btn:disabled { opacity: 0.5; cursor: default; }
   .results { display: grid; gap: 10px; }
+  .results-meta { color: var(--muted); font-size: 13px; margin: -6px 0 12px; }
   .combo {
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -121,10 +114,10 @@
     gap: 8px;
   }
   .combo.best { border-color: var(--ok); background: var(--ok-soft); }
-  .combo-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+  .combo-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; }
   .combo-title { font-weight: 600; font-size: 16px; }
   .meta { color: var(--muted); font-size: 13px; }
-  .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--ok); color: #fff; margin-left: 6px; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--ok); color: #fff; margin-left: 6px; font-weight: 500; }
   .stack { display: flex; height: 26px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
   .stack div {
     display: flex; align-items: center; justify-content: center;
@@ -136,7 +129,32 @@
   .nearest { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 520px) { .nearest { grid-template-columns: 1fr; } }
   .big { font-size: 24px; font-weight: 600; }
-  .hidden { display: none; }
+  .hidden { display: none !important; }
+  /* Catalogue repliable */
+  details.card > summary {
+    cursor: pointer; font-weight: 600; font-size: 17px; list-style: none;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary::after { content: "▾"; color: var(--muted); transition: transform .15s; }
+  details.card[open] > summary::after { transform: rotate(180deg); }
+  details.card[open] > summary { margin-bottom: 12px; }
+  .summary-sub { font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 8px; }
+  /* Tableaux */
+  .table-wrap { overflow-x: auto; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+  th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  td.num, th.num { text-align: right; }
+  td input { padding: 5px 7px; min-width: 70px; }
+  tr.off td:not(:first-child) { opacity: 0.45; }
+  tfoot td { font-weight: 600; border-bottom: none; }
+  .order-line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); align-items: center; }
+  .order-line:last-child { border-bottom: none; }
+  .order-line b { font-weight: 600; }
+  h3 { font-size: 14px; margin: 16px 0 4px; color: var(--muted); font-weight: 500; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 24px; }
 </style>
 </head>
@@ -147,49 +165,21 @@
 </header>
 
 <main>
-  <!-- Catalogue -->
+  <!-- Calcul (en premier : c'est ce qu'on utilise le plus) -->
   <section class="card">
-    <h2>Catalogue</h2>
-    <div class="grid">
-      <label>Produit
-        <select id="productSelect"></select>
-      </label>
-      <label>Type
-        <select id="productType">
-          <option value="souple">Souple</option>
-          <option value="semi-rigide">Semi-rigide</option>
-          <option value="rigide">Rigide</option>
-        </select>
-      </label>
-      <label>λ (W/m·K)
-        <input id="productLambda" type="number" step="0.001" min="0">
-      </label>
-    </div>
-    <p class="hint">Épaisseurs disponibles (mm) — touche une épaisseur pour l'activer ou la désactiver.</p>
-    <div class="chips" id="thicknessChips"></div>
-    <div class="row">
-      <input id="newThickness" type="number" min="1" placeholder="Ajouter (mm)" style="max-width:150px">
-      <button class="btn" id="addThicknessBtn">Ajouter</button>
-      <button class="btn" id="removeThicknessBtn">Retirer les désactivées</button>
-    </div>
-    <div class="row">
-      <button class="btn" id="newProductBtn">Nouveau produit</button>
-      <button class="btn" id="renameProductBtn">Renommer</button>
-      <button class="btn" id="deleteProductBtn">Supprimer</button>
-      <button class="btn" id="resetBtn">Réinitialiser</button>
-    </div>
-  </section>
+    <label>Produit
+      <select id="productSelect"></select>
+    </label>
+    <div class="product-name" id="productInfo"></div>
 
-  <!-- Calcul -->
-  <section class="card">
-    <div class="tabs">
+    <div class="tabs" style="margin-top:14px">
       <button class="tab active" data-mode="combo">Combinaisons</button>
       <button class="tab" data-mode="inverse">Épaisseur la plus proche</button>
     </div>
 
     <div class="grid">
       <label>Épaisseur cible (mm)
-        <input id="target" type="number" min="1" value="220">
+        <input id="target" type="number" min="1" value="220" inputmode="numeric">
       </label>
       <label>Couches max.
         <select id="maxLayers">
@@ -199,10 +189,10 @@
         </select>
       </label>
       <label class="combo-only">Tolérance − (mm)
-        <input id="tolMinus" type="number" min="0" value="0">
+        <input id="tolMinus" type="number" min="0" value="0" inputmode="numeric">
       </label>
       <label class="combo-only">Tolérance + (mm)
-        <input id="tolPlus" type="number" min="0" value="10">
+        <input id="tolPlus" type="number" min="0" value="10" inputmode="numeric">
       </label>
     </div>
     <p class="hint" id="typeHint"></p>
@@ -211,48 +201,150 @@
   <!-- Resultats -->
   <section class="card">
     <h2 id="resultsTitle">Résultats</h2>
+    <div class="results-meta" id="resultsMeta"></div>
+    <div class="grid" style="margin-bottom:12px">
+      <label>Surface à isoler (m²)
+        <input id="surface" type="number" min="0" step="0.1" placeholder="ex. 42,5" inputmode="decimal">
+      </label>
+      <label>Repère (facultatif)
+        <input id="repere" type="text" placeholder="ex. Façade nord">
+      </label>
+    </div>
     <div id="results" class="results"></div>
   </section>
+
+  <!-- Commande -->
+  <section class="card" id="orderCard">
+    <h2>Commande</h2>
+    <div id="orderLines"></div>
+    <div id="orderSummary"></div>
+    <div class="row" id="orderActions">
+      <label style="max-width:140px">Chute (%)
+        <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric">
+      </label>
+      <button class="btn primary" id="copyOrderBtn">Copier la commande</button>
+      <button class="btn ghost" id="clearOrderBtn">Vider</button>
+    </div>
+  </section>
+
+  <!-- Catalogue (replie par defaut : on y touche rarement) -->
+  <details class="card" id="catalogCard">
+    <summary><span>Gérer le catalogue <span class="summary-sub" id="catalogSub"></span></span></summary>
+    <div class="grid">
+      <label>Type
+        <select id="productType">
+          <option value="souple">Souple</option>
+          <option value="semi-rigide">Semi-rigide</option>
+          <option value="rigide">Rigide</option>
+        </select>
+      </label>
+      <label>λ (W/m·K)
+        <input id="productLambda" type="number" step="0.001" min="0" inputmode="decimal">
+      </label>
+      <label>Paquets par multipac
+        <input id="productPacksMP" type="number" min="0" step="1" inputmode="numeric">
+      </label>
+    </div>
+    <p class="hint">Décoche une épaisseur pour l'exclure des calculs (rupture de stock…). Les m² par paquet et le prix servent à la commande.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Dispo</th><th class="num">mm</th><th class="num">m²/paquet</th><th class="num">CHF/m²</th><th></th></tr></thead>
+        <tbody id="thicknessRows"></tbody>
+      </table>
+    </div>
+    <div class="row">
+      <input id="newThickness" type="number" min="1" placeholder="Épaisseur (mm)" style="max-width:150px" inputmode="numeric">
+      <button class="btn" id="addThicknessBtn">Ajouter</button>
+    </div>
+    <div class="row">
+      <button class="btn small" id="newProductBtn">Nouveau produit</button>
+      <button class="btn small" id="renameProductBtn">Renommer</button>
+      <button class="btn small" id="deleteProductBtn">Supprimer</button>
+      <button class="btn small ghost" id="resetBtn">Réinitialiser</button>
+    </div>
+  </details>
 </main>
 
-<footer>Strate · V1</footer>
+<footer>Strate · V2</footer>
+<div class="toast" id="toast"></div>
 
 <script>
 // ===== Catalogue par defaut =====
-// Isover Suisse, ISORESIST 1000 031 F : plaque facade ventilee, ~40 kg/m3
+// Isover Suisse, ISORESIST 1000 031 F : plaque facade ventilee 60 x 125 cm, ~40 kg/m3
+// m2 par paquet (EP) et prix CHF/m2 HT d'apres la fiche produit CRB
 const DEFAULT_PRODUCTS = [
   {
     id: "isoresist-1000-031-f",
     name: "Isover ISORESIST 1000 031 F",
     type: "semi-rigide",
     lambda: 0.031,
-    thicknesses: [40, 60, 80, 100, 120, 140, 160, 180, 200].map(t => ({ t, on: true }))
+    packsPerMP: 12,
+    thicknesses: [
+      { t: 40,  m2Pack: 7.50, price: 11.90 },
+      { t: 60,  m2Pack: 4.50, price: 17.30 },
+      { t: 80,  m2Pack: 3.75, price: 22.80 },
+      { t: 100, m2Pack: 3.00, price: 28.20 },
+      { t: 120, m2Pack: 2.25, price: 33.70 },
+      { t: 140, m2Pack: 1.50, price: 38.90, packsPerMP: 16 },
+      { t: 160, m2Pack: 1.50, price: 43.90 },
+      { t: 180, m2Pack: 1.50, price: 49.30 },
+      { t: 200, m2Pack: 1.50, price: 54.90 }
+    ].map(x => ({ ...x, on: true }))
   }
 ];
 
 const STORAGE_KEY = "strate.v1";
 const $ = id => document.getElementById(id);
 
+// Format francais : 7,10 au lieu de 7.10
+const fmt = (v, d = 2) => Number(v).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt0 = v => Number(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+
 // ===== Etat + sauvegarde navigateur =====
 // localStorage peut etre bloque (navigation privee) : on protege toujours par try/catch
 let state = loadState();
 let mode = "combo";
+
+function freshState() {
+  return { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {}, order: [] };
+}
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const s = JSON.parse(raw);
-      if (s && Array.isArray(s.products) && s.products.length) return s;
+      if (s && Array.isArray(s.products) && s.products.length) return migrate(s);
     }
   } catch (e) {}
-  return { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {} };
+  return freshState();
+}
+
+// Les catalogues sauves par la V1 n'ont pas les m2/paquet ni les prix :
+// on complete a partir du catalogue par defaut quand le produit correspond
+function migrate(s) {
+  s.order = Array.isArray(s.order) ? s.order : [];
+  s.inputs = s.inputs || {};
+  s.products.forEach(p => {
+    const def = DEFAULT_PRODUCTS.find(d => d.id === p.id);
+    if (def && p.packsPerMP == null) p.packsPerMP = def.packsPerMP;
+    p.thicknesses.forEach(item => {
+      const d = def && def.thicknesses.find(x => x.t === item.t);
+      if (d) {
+        if (item.m2Pack == null) item.m2Pack = d.m2Pack;
+        if (item.price == null) item.price = d.price;
+        if (item.packsPerMP == null && d.packsPerMP) item.packsPerMP = d.packsPerMP;
+      }
+    });
+  });
+  return s;
 }
 
 function saveState() {
   state.inputs = {
     target: $("target").value, maxLayers: $("maxLayers").value,
-    tolMinus: $("tolMinus").value, tolPlus: $("tolPlus").value, mode
+    tolMinus: $("tolMinus").value, tolPlus: $("tolPlus").value,
+    surface: $("surface").value, waste: $("waste").value, mode
   };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
 }
@@ -299,24 +391,17 @@ function spread(layers) {
   return Math.max(...layers) - Math.min(...layers);
 }
 
-// ===== Affichage =====
-function renderCatalog() {
+// ===== Affichage du calcul =====
+function renderProductPicker() {
   const sel = $("productSelect");
   sel.innerHTML = state.products.map(p =>
     `<option value="${p.id}" ${p.id === state.currentId ? "selected" : ""}>${escapeHtml(p.name)}</option>`
   ).join("");
   const p = currentProduct();
-  $("productType").value = p.type;
-  $("productLambda").value = p.lambda ?? "";
-  const chips = [...p.thicknesses].sort((a, b) => a.t - b.t);
-  $("thicknessChips").innerHTML = chips.length
-    ? chips.map(c => `<button class="chip ${c.on ? "on" : "off"}" data-t="${c.t}">${c.t}</button>`).join("")
-    : `<span class="empty">Aucune épaisseur — ajoutes-en une.</span>`;
-  renderTypeHint();
-}
-
-function renderTypeHint() {
-  const p = currentProduct();
+  const on = p.thicknesses.filter(x => x.on).map(x => x.t).sort((a, b) => a - b);
+  const typeLabel = { "souple": "souple", "semi-rigide": "semi-rigide", "rigide": "rigide" }[p.type] || "";
+  // Nom complet sous le menu (il est souvent tronque sur telephone)
+  $("productInfo").textContent = `${p.name} · ${typeLabel}${p.lambda ? ` · λ ${fmt(p.lambda, 3)}` : ""} · ${on.length ? on.join(", ") + " mm" : "aucune épaisseur active"}`;
   const hints = {
     "souple": "Produit souple : il se comprime un peu, une tolérance de quelques mm en moins est souvent acceptable.",
     "semi-rigide": "Produit semi-rigide : il se comprime peu, reste prudent avec la tolérance en moins.",
@@ -348,10 +433,10 @@ function comboLabel(layers) {
     .map(t => counts[t] > 1 ? `${counts[t]} × ${t}` : `${t}`).join(" + ");
 }
 
-function rValue(total) {
-  const lambda = Number(currentProduct().lambda);
+function rText(total, product = currentProduct()) {
+  const lambda = Number(product.lambda);
   if (!lambda) return "";
-  return ` · R = ${(total / 1000 / lambda).toFixed(2)} m²K/W`;
+  return `R = ${fmt(total / 1000 / lambda)} m²K/W`;
 }
 
 function diffLabel(total, target) {
@@ -360,15 +445,23 @@ function diffLabel(total, target) {
   return d > 0 ? `+${d} mm` : `${d} mm`;
 }
 
-function comboCard(c, target, best) {
+function addButton(c) {
+  return `<button class="btn small" data-add="${c.layers.join(",")}">+ Commande</button>`;
+}
+
+function comboCard(c, target, best, showR) {
+  const r = showR ? rText(c.total) : "";
   return `<div class="combo ${best ? "best" : ""}">
     <div class="combo-head">
       <span class="combo-title">${comboLabel(c.layers)} mm${best ? '<span class="badge">Meilleure</span>' : ""}</span>
-      <span class="meta">${c.total} mm · ${diffLabel(c.total, target)} · ${c.layers.length} couche${c.layers.length > 1 ? "s" : ""}${rValue(c.total)}</span>
+      ${addButton(c)}
     </div>
+    <span class="meta">${c.total} mm · ${diffLabel(c.total, target)} · ${c.layers.length} couche${c.layers.length > 1 ? "s" : ""}${r ? " · " + r : ""}</span>
     ${stackHtml(c.layers)}
   </div>`;
 }
+
+let lastCombos = [];
 
 function renderResults() {
   const p = currentProduct();
@@ -376,6 +469,7 @@ function renderResults() {
   const target = Number($("target").value);
   const maxLayers = Number($("maxLayers").value);
   const res = $("results");
+  $("resultsMeta").textContent = "";
 
   if (!thick.length) { res.innerHTML = `<p class="empty">Active au moins une épaisseur dans le catalogue.</p>`; return; }
   if (!target || target <= 0) { res.innerHTML = `<p class="empty">Saisis une épaisseur cible.</p>`; return; }
@@ -391,7 +485,10 @@ function renderResults() {
       res.innerHTML = `<p class="empty">Aucune combinaison dans la tolérance (${lo} à ${hi} mm).</p>` + nearestHtml(combos, target);
       return;
     }
-    res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0)).join("");
+    // Si toutes les combinaisons ont la meme epaisseur, R est identique : on l'affiche une seule fois
+    const sameTotal = new Set(ok.map(c => c.total)).size === 1;
+    if (sameTotal) $("resultsMeta").textContent = `Toutes à ${ok[0].total} mm${rText(ok[0].total) ? " · " + rText(ok[0].total) : ""}`;
+    res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0, !sameTotal)).join("");
   } else {
     $("resultsTitle").textContent = "Épaisseur réalisable la plus proche";
     res.innerHTML = nearestHtml(combos, target);
@@ -407,85 +504,173 @@ function nearestHtml(combos, target) {
     .sort((a, b) => a.total - b.total || a.layers.length - b.layers.length)[0];
   const block = (c, label) => c
     ? `<div class="combo ${c.total === target ? "best" : ""}">
-         <span class="meta">${label}</span>
+         <div class="combo-head"><span class="meta">${label}</span>${addButton(c)}</div>
          <span class="big">${c.total} mm</span>
-         <span class="meta">${comboLabel(c.layers)} mm · ${diffLabel(c.total, target)}${rValue(c.total)}</span>
+         <span class="meta">${comboLabel(c.layers)} mm · ${diffLabel(c.total, target)}${rText(c.total) ? " · " + rText(c.total) : ""}</span>
          ${stackHtml(c.layers)}
        </div>`
     : `<div class="combo"><span class="meta">${label}</span><span class="empty">Rien de réalisable</span></div>`;
   return `<div class="nearest">${block(below, "En dessous")}${block(above, "Au-dessus")}</div>`;
 }
 
+// ===== Commande =====
+// Une ligne = une zone (repere + surface) isolee avec une combinaison.
+// Le recap additionne les m2 par produit et par epaisseur sur toutes les lignes.
+function addToOrder(layers) {
+  const surface = Number(String($("surface").value).replace(",", "."));
+  if (!surface || surface <= 0) {
+    $("surface").focus();
+    toast("Saisis d'abord la surface à isoler");
+    return;
+  }
+  const p = currentProduct();
+  state.order.push({
+    id: "l" + Date.now(),
+    productId: p.id,
+    productName: p.name,
+    repere: $("repere").value.trim(),
+    layers,
+    surface
+  });
+  $("repere").value = "";
+  renderOrder();
+  saveState();
+  toast("Ajouté à la commande");
+}
+
+function orderTotals() {
+  const waste = Math.max(0, Number($("waste").value) || 0) / 100;
+  const map = new Map();
+  state.order.forEach(line => {
+    line.layers.forEach(t => {
+      const key = line.productId + "|" + t;
+      const cur = map.get(key) || { productId: line.productId, productName: line.productName, t, m2: 0 };
+      cur.m2 += line.surface;
+      map.set(key, cur);
+    });
+  });
+  return [...map.values()]
+    .sort((a, b) => a.productName.localeCompare(b.productName) || b.t - a.t)
+    .map(row => {
+      const product = state.products.find(p => p.id === row.productId);
+      const item = product && product.thicknesses.find(x => x.t === row.t);
+      const m2Pack = item && item.m2Pack;
+      const perMP = (item && item.packsPerMP) || (product && product.packsPerMP) || 0;
+      const m2Waste = row.m2 * (1 + waste);
+      // Arrondi au paquet superieur : on ne commande pas un demi-paquet
+      // (petit epsilon pour eviter qu'une imprecision de calcul ajoute un paquet)
+      const packs = m2Pack ? Math.ceil(m2Waste / m2Pack - 1e-9) : null;
+      const m2Ordered = packs != null ? packs * m2Pack : null;
+      const price = item && item.price && m2Ordered != null ? m2Ordered * item.price : null;
+      return { ...row, m2Waste, m2Pack, packs, perMP, m2Ordered, price };
+    });
+}
+
+function mpText(packs, perMP) {
+  // Decompose en multipacs + paquets : 15 paquets avec 12/MP -> 1 MP + 3 paquets
+  if (!perMP || packs < perMP) return "";
+  const mp = Math.floor(packs / perMP), rest = packs % perMP;
+  return `${mp} MP${rest ? ` + ${rest} paq.` : ""}`;
+}
+
+function renderOrder() {
+  const lines = state.order;
+  $("orderActions").classList.toggle("hidden", !lines.length);
+  if (!lines.length) {
+    $("orderLines").innerHTML = `<p class="empty">Saisis une surface, puis touche « + Commande » sur une combinaison.</p>`;
+    $("orderSummary").innerHTML = "";
+    return;
+  }
+  $("orderLines").innerHTML = lines.map(l => `
+    <div class="order-line">
+      <div>
+        <b>${l.repere ? escapeHtml(l.repere) : "Zone"}</b> · ${fmt0(l.surface)} m²<br>
+        <span class="meta">${comboLabel(l.layers)} mm${state.products.length > 1 ? " · " + escapeHtml(l.productName) : ""}</span>
+      </div>
+      <button class="btn small ghost" data-remove="${l.id}" aria-label="Retirer">✕</button>
+    </div>`).join("");
+
+  const rows = orderTotals();
+  const total = rows.reduce((s, r) => s + (r.price || 0), 0);
+  const multiProduct = new Set(rows.map(r => r.productId)).size > 1;
+  $("orderSummary").innerHTML = `
+    <h3>À commander</h3>
+    <div class="table-wrap" style="margin-top:4px">
+      <table>
+        <thead><tr><th>Épaisseur</th><th class="num">m² + chute</th><th class="num">Paquets</th><th class="num">m² cdés</th><th class="num">CHF HT</th></tr></thead>
+        <tbody>${rows.map(r => `
+          <tr>
+            <td>${r.t} mm${multiProduct ? `<br><span class="meta">${escapeHtml(r.productName)}</span>` : ""}</td>
+            <td class="num">${fmt(r.m2Waste, 1)}</td>
+            <td class="num">${r.packs != null ? `${r.packs}${mpText(r.packs, r.perMP) ? `<br><span class="meta">${mpText(r.packs, r.perMP)}</span>` : ""}` : "—"}</td>
+            <td class="num">${r.m2Ordered != null ? fmt(r.m2Ordered, 2) : "—"}</td>
+            <td class="num">${r.price != null ? fmt(r.price) : "—"}</td>
+          </tr>`).join("")}
+        </tbody>
+        ${total ? `<tfoot><tr><td colspan="4">Total estimé (prix catalogue)</td><td class="num">${fmt(total)}</td></tr></tfoot>` : ""}
+      </table>
+    </div>
+    ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}`;
+}
+
+function orderText() {
+  const rows = orderTotals();
+  const waste = Number($("waste").value) || 0;
+  const products = [...new Set(rows.map(r => r.productName))];
+  let txt = "";
+  products.forEach(name => {
+    txt += `${name}\n`;
+    rows.filter(r => r.productName === name).forEach(r => {
+      txt += r.packs != null
+        ? `- ${r.t} mm : ${r.packs} paquet${r.packs > 1 ? "s" : ""} (${fmt(r.m2Ordered)} m²)${mpText(r.packs, r.perMP) ? ` soit ${mpText(r.packs, r.perMP)}` : ""}\n`
+        : `- ${r.t} mm : ${fmt(r.m2Waste, 1)} m²\n`;
+    });
+    txt += "\n";
+  });
+  txt += "Détail par zone :\n";
+  state.order.forEach(l => { txt += `- ${l.repere || "Zone"} : ${fmt0(l.surface)} m², ${comboLabel(l.layers)} mm\n`; });
+  txt += `\n(Quantités avec ${waste} % de chute)`;
+  return txt;
+}
+
+// ===== Catalogue =====
+function renderCatalog() {
+  const p = currentProduct();
+  $("productType").value = p.type;
+  $("productLambda").value = p.lambda ?? "";
+  $("productPacksMP").value = p.packsPerMP ?? "";
+  $("catalogSub").textContent = `${state.products.length} produit${state.products.length > 1 ? "s" : ""}`;
+  const rows = [...p.thicknesses].sort((a, b) => a.t - b.t);
+  $("thicknessRows").innerHTML = rows.length ? rows.map(x => `
+    <tr class="${x.on ? "" : "off"}" data-t="${x.t}">
+      <td><input type="checkbox" data-field="on" ${x.on ? "checked" : ""} aria-label="Disponible"></td>
+      <td class="num">${x.t}</td>
+      <td class="num"><input type="number" step="0.01" min="0" data-field="m2Pack" value="${x.m2Pack ?? ""}" inputmode="decimal"></td>
+      <td class="num"><input type="number" step="0.05" min="0" data-field="price" value="${x.price ?? ""}" inputmode="decimal"></td>
+      <td><button class="btn small ghost" data-del="${x.t}" aria-label="Supprimer">✕</button></td>
+    </tr>`).join("")
+    : `<tr><td colspan="5" class="empty">Aucune épaisseur — ajoutes-en une.</td></tr>`;
+}
+
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-function refresh() { renderCatalog(); renderResults(); saveState(); }
+let toastTimer;
+function toast(msg) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+}
 
-// ===== Evenements =====
-$("productSelect").addEventListener("change", e => { state.currentId = e.target.value; refresh(); });
-$("productType").addEventListener("change", e => { currentProduct().type = e.target.value; refresh(); });
-$("productLambda").addEventListener("input", e => { currentProduct().lambda = Number(e.target.value) || null; renderResults(); saveState(); });
+function refreshAll() { renderProductPicker(); renderCatalog(); renderResults(); renderOrder(); saveState(); }
 
-$("thicknessChips").addEventListener("click", e => {
-  const chip = e.target.closest(".chip");
-  if (!chip) return;
-  const t = Number(chip.dataset.t);
-  const item = currentProduct().thicknesses.find(x => x.t === t);
-  if (item) item.on = !item.on;
-  refresh();
-});
-
-$("addThicknessBtn").addEventListener("click", () => {
-  const t = Math.round(Number($("newThickness").value));
-  if (!t || t <= 0) return;
-  const p = currentProduct();
-  if (!p.thicknesses.some(x => x.t === t)) p.thicknesses.push({ t, on: true });
-  $("newThickness").value = "";
-  refresh();
-});
-$("newThickness").addEventListener("keydown", e => { if (e.key === "Enter") $("addThicknessBtn").click(); });
-
-$("removeThicknessBtn").addEventListener("click", () => {
-  const p = currentProduct();
-  p.thicknesses = p.thicknesses.filter(x => x.on);
-  refresh();
-});
-
-$("newProductBtn").addEventListener("click", () => {
-  const name = prompt("Nom du produit (ex. Flumroc Dämmplatte 3) :");
-  if (!name) return;
-  const raw = prompt("Épaisseurs disponibles en mm, séparées par des virgules :", "40, 60, 80, 100, 120");
-  const list = (raw || "").split(/[,;\s]+/).map(Number).filter(n => n > 0);
-  const id = "p" + Date.now();
-  state.products.push({ id, name, type: "semi-rigide", lambda: null, thicknesses: [...new Set(list)].map(t => ({ t, on: true })) });
-  state.currentId = id;
-  refresh();
-});
-
-$("renameProductBtn").addEventListener("click", () => {
-  const p = currentProduct();
-  const name = prompt("Nouveau nom :", p.name);
-  if (name) { p.name = name; refresh(); }
-});
-
-$("deleteProductBtn").addEventListener("click", () => {
-  if (state.products.length <= 1) { alert("Il faut garder au moins un produit."); return; }
-  const p = currentProduct();
-  if (!confirm(`Supprimer « ${p.name} » ?`)) return;
-  state.products = state.products.filter(x => x.id !== p.id);
-  state.currentId = state.products[0].id;
-  refresh();
-});
-
-$("resetBtn").addEventListener("click", () => {
-  if (!confirm("Revenir au catalogue d'origine ? Tes produits ajoutés seront perdus.")) return;
-  state = { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {} };
-  refresh();
-});
+// ===== Evenements : calcul =====
+$("productSelect").addEventListener("change", e => { state.currentId = e.target.value; refreshAll(); });
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
-
 function setMode(m) {
   mode = m;
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.mode === m));
@@ -498,6 +683,118 @@ function setMode(m) {
 ["target", "maxLayers", "tolMinus", "tolPlus"].forEach(id =>
   $(id).addEventListener("input", () => { renderResults(); saveState(); })
 );
+$("surface").addEventListener("input", saveState);
+
+$("results").addEventListener("click", e => {
+  const btn = e.target.closest("[data-add]");
+  if (btn) addToOrder(btn.dataset.add.split(",").map(Number));
+});
+
+// ===== Evenements : commande =====
+$("orderLines").addEventListener("click", e => {
+  const btn = e.target.closest("[data-remove]");
+  if (!btn) return;
+  state.order = state.order.filter(l => l.id !== btn.dataset.remove);
+  renderOrder(); saveState();
+});
+$("waste").addEventListener("input", () => { renderOrder(); saveState(); });
+$("clearOrderBtn").addEventListener("click", () => {
+  if (!confirm("Vider toute la commande ?")) return;
+  state.order = [];
+  renderOrder(); saveState();
+});
+$("copyOrderBtn").addEventListener("click", async () => {
+  const txt = orderText();
+  try {
+    await navigator.clipboard.writeText(txt);
+    toast("Commande copiée");
+  } catch (e) {
+    // Repli si le presse-papier est refuse : on affiche le texte a copier a la main
+    prompt("Copie ce texte :", txt);
+  }
+});
+
+// ===== Evenements : catalogue =====
+$("productType").addEventListener("change", e => { currentProduct().type = e.target.value; refreshAll(); });
+$("productLambda").addEventListener("input", e => {
+  currentProduct().lambda = Number(e.target.value) || null;
+  renderProductPicker(); renderResults(); saveState();
+});
+$("productPacksMP").addEventListener("input", e => {
+  currentProduct().packsPerMP = Number(e.target.value) || null;
+  renderOrder(); saveState();
+});
+
+$("thicknessRows").addEventListener("input", e => {
+  const field = e.target.dataset.field;
+  const tr = e.target.closest("tr");
+  if (!field || !tr) return;
+  const item = currentProduct().thicknesses.find(x => x.t === Number(tr.dataset.t));
+  if (!item) return;
+  if (field === "on") {
+    item.on = e.target.checked;
+    tr.classList.toggle("off", !item.on);
+    renderProductPicker(); renderResults();
+  } else {
+    item[field] = e.target.value === "" ? null : Number(e.target.value);
+    renderOrder();
+  }
+  saveState();
+});
+
+$("thicknessRows").addEventListener("click", e => {
+  const btn = e.target.closest("[data-del]");
+  if (!btn) return;
+  const p = currentProduct();
+  p.thicknesses = p.thicknesses.filter(x => x.t !== Number(btn.dataset.del));
+  refreshAll();
+});
+
+$("addThicknessBtn").addEventListener("click", () => {
+  const t = Math.round(Number($("newThickness").value));
+  if (!t || t <= 0) return;
+  const p = currentProduct();
+  if (!p.thicknesses.some(x => x.t === t)) p.thicknesses.push({ t, on: true, m2Pack: null, price: null });
+  $("newThickness").value = "";
+  refreshAll();
+});
+$("newThickness").addEventListener("keydown", e => { if (e.key === "Enter") $("addThicknessBtn").click(); });
+
+$("newProductBtn").addEventListener("click", () => {
+  const name = prompt("Nom du produit (ex. Flumroc Dämmplatte 3) :");
+  if (!name) return;
+  const raw = prompt("Épaisseurs disponibles en mm, séparées par des virgules :", "40, 60, 80, 100, 120");
+  const list = (raw || "").split(/[,;\s]+/).map(Number).filter(n => n > 0);
+  const id = "p" + Date.now();
+  state.products.push({
+    id, name, type: "semi-rigide", lambda: null, packsPerMP: null,
+    thicknesses: [...new Set(list)].map(t => ({ t, on: true, m2Pack: null, price: null }))
+  });
+  state.currentId = id;
+  refreshAll();
+  toast("Pense à renseigner les m² par paquet");
+});
+
+$("renameProductBtn").addEventListener("click", () => {
+  const p = currentProduct();
+  const name = prompt("Nouveau nom :", p.name);
+  if (name) { p.name = name; refreshAll(); }
+});
+
+$("deleteProductBtn").addEventListener("click", () => {
+  if (state.products.length <= 1) { alert("Il faut garder au moins un produit."); return; }
+  const p = currentProduct();
+  if (!confirm(`Supprimer « ${p.name} » ?`)) return;
+  state.products = state.products.filter(x => x.id !== p.id);
+  state.currentId = state.products[0].id;
+  refreshAll();
+});
+
+$("resetBtn").addEventListener("click", () => {
+  if (!confirm("Revenir au catalogue d'origine ? Tes produits ajoutés et la commande seront perdus.")) return;
+  state = freshState();
+  refreshAll();
+});
 
 // ===== Demarrage : on restaure les dernieres saisies =====
 const inp = state.inputs || {};
@@ -505,7 +802,11 @@ if (inp.target) $("target").value = inp.target;
 if (inp.maxLayers) $("maxLayers").value = inp.maxLayers;
 if (inp.tolMinus !== undefined && inp.tolMinus !== "") $("tolMinus").value = inp.tolMinus;
 if (inp.tolPlus !== undefined && inp.tolPlus !== "") $("tolPlus").value = inp.tolPlus;
+if (inp.surface) $("surface").value = inp.surface;
+if (inp.waste !== undefined && inp.waste !== "") $("waste").value = inp.waste;
+renderProductPicker();
 renderCatalog();
+renderOrder();
 setMode(inp.mode || "combo");
 </script>
 </body>
