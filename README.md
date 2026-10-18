@@ -11,6 +11,7 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **Import d'un tableau** (V4) : coller le tableau d'une fiche technique (PDF, Excel, Power Query), choisir les colonnes, créer ou mettre à jour un produit.
 - **Copie vers Excel** (V3) : zones (façade, étage) copiées avec mise en forme ; en-tête au 1er collage, puis seulement les nouvelles zones. Récap de commande copiable aussi.
 - **V5** : sauvegarde / restauration dans un fichier (avec fusion du catalogue d'un collègue), commandes nommées, prix CHF/m² par combinaison et tri « le moins cher », zones modifiables, date des prix, surface saisie sous forme de calcul (12,5*3,2+8).
+- **V6-V7** : affichage soigné en mode sombre, deux colonnes sur PC, bouton de thème Auto / Clair / Sombre, bon de commande PDF classé par façade puis par étage.
 - Le catalogue (m²/paquet et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
 ## Utilisation
