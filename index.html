@@ -161,6 +161,15 @@
   .preview td, .preview th { font-size: 13px; }
   .preview select { padding: 4px 6px; font-size: 12px; min-width: 110px; }
   .preview tr.skip td { opacity: 0.35; text-decoration: line-through; }
+  .order-line.editable { cursor: pointer; }
+  .order-line.editable:hover b { text-decoration: underline; }
+  .price-tag { font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+  .modal { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; width: 100%; max-width: 420px; max-height: 90vh; overflow: auto; }
+  .modal h2 { margin: 0 0 8px; font-size: 17px; }
+  .modal-fields { display: grid; gap: 10px; }
+  .modal-error { color: #dc2626; font-size: 13px; margin: 8px 0 0; min-height: 0; }
+  .modal-error:empty { display: none; }
   .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .toast.show { opacity: 1; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 24px; }
@@ -202,6 +211,12 @@
       <label class="combo-only">Tolérance + (mm)
         <input id="tolPlus" type="number" min="0" value="10" inputmode="numeric">
       </label>
+      <label class="combo-only">Classement
+        <select id="sortMode">
+          <option value="reco">Recommandé</option>
+          <option value="price">Le moins cher</option>
+        </select>
+      </label>
     </div>
     <p class="hint" id="typeHint"></p>
   </section>
@@ -212,7 +227,8 @@
     <div class="results-meta" id="resultsMeta"></div>
     <div class="grid" style="margin-bottom:12px">
       <label>Surface à isoler (m²)
-        <input id="surface" type="number" min="0" step="0.1" placeholder="ex. 42,5" inputmode="decimal">
+        <input id="surface" type="text" placeholder="ex. 42,5 ou 12,5*3,2+8" inputmode="decimal" autocomplete="off">
+        <span class="meta" id="surfaceCalc"></span>
       </label>
       <label>Façade (facultatif)
         <input id="facade" type="text" placeholder="ex. Nord">
@@ -227,6 +243,12 @@
   <!-- Commande -->
   <section class="card" id="orderCard">
     <h2>Commande</h2>
+    <div class="row" style="margin-top:0; margin-bottom:8px">
+      <select id="orderSelect" style="flex:1; min-width:160px"></select>
+      <button class="btn small" id="newOrderBtn">Nouvelle</button>
+      <button class="btn small" id="renameOrderBtn">Renommer</button>
+      <button class="btn small ghost" id="deleteOrderBtn">Supprimer</button>
+    </div>
     <div id="orderLines"></div>
     <div id="orderSummary"></div>
     <div id="orderActions">
@@ -262,6 +284,9 @@
       </label>
       <label>Paquets par multipac
         <input id="productPacksMP" type="number" min="0" step="1" inputmode="numeric">
+      </label>
+      <label>Prix relevés le
+        <input id="productPriceDate" type="date">
       </label>
     </div>
     <p class="hint">Décoche une épaisseur pour l'exclure des calculs (rupture de stock…). Les m² par paquet et le prix servent à la commande.</p>
@@ -319,10 +344,32 @@
       </div>
     </div>
   </details>
+
+  <!-- Sauvegarde : tout est dans le navigateur, donc on permet d'exporter un fichier -->
+  <section class="card">
+    <h2>Sauvegarde</h2>
+    <p class="hint" style="margin-top:0" id="backupHint"></p>
+    <div class="row">
+      <button class="btn primary" id="backupBtn">Sauvegarder</button>
+      <button class="btn" id="restoreBtn">Restaurer</button>
+      <input type="file" id="restoreFile" accept=".json,application/json" class="hidden">
+    </div>
+  </section>
 </main>
 
-<footer>Strate · V4</footer>
+<footer>Strate · V5</footer>
 <div class="toast" id="toast"></div>
+
+<!-- Fenetre de dialogue maison (remplace les fenetres grises du navigateur) -->
+<div class="modal-backdrop hidden" id="modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h2 id="modalTitle"></h2>
+    <p class="hint" id="modalText" style="margin-top:0"></p>
+    <div id="modalFields" class="modal-fields"></div>
+    <p class="modal-error" id="modalError"></p>
+    <div class="row" id="modalButtons" style="justify-content:flex-end"></div>
+  </div>
+</div>
 
 <script>
 // ===== Catalogue par defaut =====
@@ -335,6 +382,7 @@ const DEFAULT_PRODUCTS = [
     type: "semi-rigide",
     lambda: 0.031,
     packsPerMP: 12,
+    priceDate: "2026-10-18",
     thicknesses: [
       { t: 40,  m2Pack: 7.50, price: 11.90 },
       { t: 60,  m2Pack: 4.50, price: 17.30 },
@@ -361,8 +409,17 @@ const fmt0 = v => Number(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 }
 let state = loadState();
 let mode = "combo";
 
+function newOrder(name) {
+  return { id: "o" + Date.now() + Math.floor(Math.random() * 1000), name, lines: [], waste: 5 };
+}
+
 function freshState() {
-  return { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {}, order: [] };
+  const o = newOrder("Commande 1");
+  return { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {}, orders: [o], currentOrderId: o.id };
+}
+
+function curOrder() {
+  return state.orders.find(o => o.id === state.currentOrderId) || state.orders[0];
 }
 
 function loadState() {
@@ -379,13 +436,23 @@ function loadState() {
 // Les catalogues sauves par la V1 n'ont pas les m2/paquet ni les prix :
 // on complete a partir du catalogue par defaut quand le produit correspond
 function migrate(s) {
-  s.order = Array.isArray(s.order) ? s.order : [];
-  // V2 : un seul champ "repere" -> devient la facade en V3
-  s.order.forEach(l => { if (l.repere && !l.facade) { l.facade = l.repere; delete l.repere; } });
   s.inputs = s.inputs || {};
+  // V2-V4 : une seule commande "order" -> devient la premiere commande nommee en V5
+  if (!Array.isArray(s.orders) || !s.orders.length) {
+    const o = newOrder("Commande 1");
+    o.lines = Array.isArray(s.order) ? s.order : [];
+    if (s.inputs.waste !== undefined && s.inputs.waste !== "") o.waste = Number(s.inputs.waste) || 0;
+    s.orders = [o];
+    s.currentOrderId = o.id;
+  }
+  delete s.order;
+  if (!s.orders.some(o => o.id === s.currentOrderId)) s.currentOrderId = s.orders[0].id;
+  // V2 : un seul champ "repere" -> devient la facade en V3
+  s.orders.forEach(o => o.lines.forEach(l => { if (l.repere && !l.facade) { l.facade = l.repere; delete l.repere; } }));
   s.products.forEach(p => {
     const def = DEFAULT_PRODUCTS.find(d => d.id === p.id);
     if (def && p.packsPerMP == null) p.packsPerMP = def.packsPerMP;
+    if (def && p.priceDate == null) p.priceDate = def.priceDate;
     p.thicknesses.forEach(item => {
       const d = def && def.thicknesses.find(x => x.t === item.t);
       if (d) {
@@ -402,7 +469,7 @@ function saveState() {
   state.inputs = {
     target: $("target").value, maxLayers: $("maxLayers").value,
     tolMinus: $("tolMinus").value, tolPlus: $("tolPlus").value,
-    surface: $("surface").value, waste: $("waste").value,
+    surface: $("surface").value, sortMode: $("sortMode").value,
     facade: $("facade").value, etage: $("etage").value, mode
   };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
@@ -429,12 +496,32 @@ function allCombos(thicknesses, maxLayers) {
     }
   }
   rec(0, []);
-  return out.map(layers => ({ layers, total: layers.reduce((a, b) => a + b, 0) }));
+  return out.map(layers => ({ layers, total: layers.reduce((a, b) => a + b, 0), price: comboPrice(layers) }));
+}
+
+// Prix au m2 d'une combinaison = somme des prix au m2 de chaque couche
+// (null si une couche n'a pas de prix dans le catalogue)
+function comboPrice(layers, product = currentProduct()) {
+  let sum = 0;
+  for (const t of layers) {
+    const item = product.thicknesses.find(x => x.t === t);
+    if (!item || item.price == null) return null;
+    sum += item.price;
+  }
+  return sum;
 }
 
 // Tri : d'abord le moins de couches, puis le plus petit ecart a la cible,
 // puis on prefere etre au-dessus plutot qu'en dessous, puis le moins de references differentes
-function sortCombos(combos, target) {
+function sortCombos(combos, target, byPrice = false) {
+  if (byPrice) {
+    // Le moins cher d'abord ; une combinaison sans prix connu passe en dernier
+    const price = c => c.price ?? Infinity;
+    return combos.sort((a, b) =>
+      price(a) - price(b) ||
+      a.layers.length - b.layers.length ||
+      Math.abs(a.total - target) - Math.abs(b.total - target));
+  }
   return combos.sort((a, b) =>
     a.layers.length - b.layers.length ||
     Math.abs(a.total - target) - Math.abs(b.total - target) ||
@@ -508,12 +595,16 @@ function addButton(c) {
   return `<button class="btn small" data-add="${c.layers.join(",")}">+ Commande</button>`;
 }
 
-function comboCard(c, target, best, showR) {
+function priceTag(c) {
+  return c.price != null ? `<span class="price-tag">${fmt(c.price)} CHF/m²</span>` : "";
+}
+
+function comboCard(c, target, best, showR, badge = "Meilleure") {
   const r = showR ? rText(c.total) : "";
   return `<div class="combo ${best ? "best" : ""}">
     <div class="combo-head">
-      <span class="combo-title">${comboLabel(c.layers)} mm${best ? '<span class="badge">Meilleure</span>' : ""}</span>
-      ${addButton(c)}
+      <span class="combo-title">${comboLabel(c.layers)} mm${best ? `<span class="badge">${badge}</span>` : ""}</span>
+      <span class="row" style="margin:0">${priceTag(c)}${addButton(c)}</span>
     </div>
     <span class="meta">${c.total} mm · ${diffLabel(c.total, target)} · ${c.layers.length} couche${c.layers.length > 1 ? "s" : ""}${r ? " · " + r : ""}</span>
     ${stackHtml(c.layers)}
@@ -539,7 +630,8 @@ function renderResults() {
     $("resultsTitle").textContent = "Combinaisons possibles";
     const lo = target - Number($("tolMinus").value || 0);
     const hi = target + Number($("tolPlus").value || 0);
-    const ok = sortCombos(combos.filter(c => c.total >= lo && c.total <= hi), target).slice(0, 8);
+    const byPrice = $("sortMode").value === "price";
+    const ok = sortCombos(combos.filter(c => c.total >= lo && c.total <= hi), target, byPrice).slice(0, 8);
     if (!ok.length) {
       res.innerHTML = `<p class="empty">Aucune combinaison dans la tolérance (${lo} à ${hi} mm).</p>` + nearestHtml(combos, target);
       return;
@@ -547,7 +639,7 @@ function renderResults() {
     // Si toutes les combinaisons ont la meme epaisseur, R est identique : on l'affiche une seule fois
     const sameTotal = new Set(ok.map(c => c.total)).size === 1;
     if (sameTotal) $("resultsMeta").textContent = `Toutes à ${ok[0].total} mm${rText(ok[0].total) ? " · " + rText(ok[0].total) : ""}`;
-    res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0, !sameTotal)).join("");
+    res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0, !sameTotal, byPrice ? "Moins chère" : "Meilleure")).join("");
   } else {
     $("resultsTitle").textContent = "Épaisseur réalisable la plus proche";
     res.innerHTML = nearestHtml(combos, target);
@@ -563,7 +655,7 @@ function nearestHtml(combos, target) {
     .sort((a, b) => a.total - b.total || a.layers.length - b.layers.length)[0];
   const block = (c, label) => c
     ? `<div class="combo ${c.total === target ? "best" : ""}">
-         <div class="combo-head"><span class="meta">${label}</span>${addButton(c)}</div>
+         <div class="combo-head"><span class="meta">${label}</span><span class="row" style="margin:0">${priceTag(c)}${addButton(c)}</span></div>
          <span class="big">${c.total} mm</span>
          <span class="meta">${comboLabel(c.layers)} mm · ${diffLabel(c.total, target)}${rText(c.total) ? " · " + rText(c.total) : ""}</span>
          ${stackHtml(c.layers)}
@@ -575,15 +667,35 @@ function nearestHtml(combos, target) {
 // ===== Commande =====
 // Une ligne = une zone (facade, etage, surface) isolee avec une combinaison.
 // Le recap additionne les m2 par produit et par epaisseur sur toutes les lignes.
+// Surface : accepte un nombre ou un petit calcul (12,5*3,2 + 4*2,5 - 1,2*1,4)
+// pour additionner les panneaux d'une facade et retirer les ouvertures.
+// On n'autorise que chiffres, operateurs et parentheses avant d'evaluer.
+function evalSurface(raw) {
+  const s = String(raw || "").trim().replace(/,/g, ".").replace(/[x×]/gi, "*").replace(/\s+/g, "");
+  if (!s) return null;
+  if (!/^[\d.+\-*/()]+$/.test(s)) return NaN;
+  try {
+    const v = Function(`"use strict"; return (${s});`)();
+    return typeof v === "number" && isFinite(v) ? Math.round(v * 100) / 100 : NaN;
+  } catch (e) { return NaN; }
+}
+
+function renderSurfaceCalc() {
+  const raw = $("surface").value;
+  const v = evalSurface(raw);
+  const isPlain = /^\s*\d+([.,]\d+)?\s*$/.test(raw);
+  $("surfaceCalc").textContent = v == null || isPlain ? "" : isNaN(v) ? "Calcul illisible" : `= ${fmt0(v)} m²`;
+}
+
 function addToOrder(layers) {
-  const surface = Number(String($("surface").value).replace(",", "."));
-  if (!surface || surface <= 0) {
+  const surface = evalSurface($("surface").value);
+  if (!surface || isNaN(surface) || surface <= 0) {
     $("surface").focus();
     toast("Saisis d'abord la surface à isoler");
     return;
   }
   const p = currentProduct();
-  state.order.push({
+  curOrder().lines.push({
     id: "l" + Date.now(),
     productId: p.id,
     productName: p.name,
@@ -600,9 +712,9 @@ function addToOrder(layers) {
 }
 
 function orderTotals() {
-  const waste = Math.max(0, Number($("waste").value) || 0) / 100;
+  const waste = Math.max(0, Number(curOrder().waste) || 0) / 100;
   const map = new Map();
-  state.order.forEach(line => {
+  curOrder().lines.forEach(line => {
     line.layers.forEach(t => {
       const key = line.productId + "|" + t;
       const cur = map.get(key) || { productId: line.productId, productName: line.productName, t, m2: 0 };
@@ -634,8 +746,34 @@ function mpText(packs, perMP) {
   return `${mp} MP${rest ? ` + ${rest} paq.` : ""}`;
 }
 
+function renderOrderPicker() {
+  $("orderSelect").innerHTML = state.orders.map(o =>
+    `<option value="${o.id}" ${o.id === curOrder().id ? "selected" : ""}>${escapeHtml(o.name)} (${o.lines.length} zone${o.lines.length > 1 ? "s" : ""})</option>`
+  ).join("");
+  $("waste").value = curOrder().waste ?? 5;
+}
+
+function frDate(iso) {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+// Date des prix des produits utilises dans la commande (les prix vieillissent)
+function priceDateNote(rows) {
+  const ids = [...new Set(rows.map(r => r.productId))];
+  const parts = ids.map(id => {
+    const p = state.products.find(x => x.id === id);
+    if (!p) return "";
+    const label = ids.length > 1 ? `${p.name} : ` : "";
+    return p.priceDate ? `${label}prix relevés le ${frDate(p.priceDate)}` : `${label}date des prix inconnue`;
+  }).filter(Boolean);
+  return parts.join(" · ");
+}
+
 function renderOrder() {
-  const lines = state.order;
+  renderOrderPicker();
+  const lines = curOrder().lines;
   $("orderActions").classList.toggle("hidden", !lines.length);
   if (!lines.length) {
     $("orderLines").innerHTML = `<p class="empty">Saisis une surface, puis touche « + Commande » sur une combinaison.</p>`;
@@ -643,9 +781,9 @@ function renderOrder() {
     return;
   }
   $("orderLines").innerHTML = lines.map(l => `
-    <div class="order-line">
+    <div class="order-line editable" data-edit="${l.id}" title="Toucher pour modifier">
       <div>
-        <b>${escapeHtml(zoneLabel(l))}</b> · ${fmt0(l.surface)} m²<br>
+        <b>${escapeHtml(zoneLabel(l))}</b> · ${fmt0(l.surface)} m² <span class="meta">✎</span><br>
         <span class="meta">${comboLabel(l.layers)} mm${state.products.length > 1 ? " · " + escapeHtml(l.productName) : ""}${l.copied ? " · copié dans Excel" : ""}</span>
       </div>
       <button class="btn small ghost" data-remove="${l.id}" aria-label="Retirer">✕</button>
@@ -671,15 +809,16 @@ function renderOrder() {
         ${total ? `<tfoot><tr><td colspan="4">Total estimé (prix catalogue)</td><td class="num">${fmt(total)}</td></tr></tfoot>` : ""}
       </table>
     </div>
+    ${total ? `<p class="hint">${escapeHtml(priceDateNote(rows))}</p>` : ""}
     ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}`;
   renderExcelHint();
 }
 
 function orderText() {
   const rows = orderTotals();
-  const waste = Number($("waste").value) || 0;
+  const waste = Number(curOrder().waste) || 0;
   const products = [...new Set(rows.map(r => r.productName))];
-  let txt = "";
+  let txt = `${curOrder().name}\n\n`;
   products.forEach(name => {
     txt += `${name}\n`;
     rows.filter(r => r.productName === name).forEach(r => {
@@ -690,7 +829,7 @@ function orderText() {
     txt += "\n";
   });
   txt += "Détail par zone :\n";
-  state.order.forEach(l => { txt += `- ${zoneLabel(l)} : ${fmt0(l.surface)} m², ${comboLabel(l.layers)} mm\n`; });
+  curOrder().lines.forEach(l => { txt += `- ${zoneLabel(l)} : ${fmt0(l.surface)} m², ${comboLabel(l.layers)} mm\n`; });
   txt += `\n(Quantités avec ${waste} % de chute)`;
   return txt;
 }
@@ -767,7 +906,7 @@ function recapClipboard() {
   const decs = [0, 0, 2, 2, 0, 0, 2, 2, 2];
   const rows = values.map(v => `<tr>${v.map((x, i) => xlCell(x, { dec: decs[i], fmt: decs[i] ? "0\\.00" : undefined })).join("")}</tr>`);
   const total = data.reduce((s, r) => s + (r.price || 0), 0);
-  const waste = Number($("waste").value) || 0;
+  const waste = Number(curOrder().waste) || 0;
   const footer = total
     ? `<tr><td colspan="8" style="${XL.tot}">Total estimé (prix catalogue, ${waste} % de chute)</td>${xlCell(total, { style: XL.tot, dec: 2, fmt: "#,##0\\.00" })}</tr>`
     : "";
@@ -808,8 +947,8 @@ async function copyRich({ html, text }) {
 }
 
 function renderExcelHint() {
-  const fresh = state.order.filter(l => !l.copied).length;
-  const started = state.order.some(l => l.copied);
+  const fresh = curOrder().lines.filter(l => !l.copied).length;
+  const started = curOrder().lines.some(l => l.copied);
   $("copyExcelBtn").textContent = fresh && started ? `Copier pour Excel (${fresh} nouvelle${fresh > 1 ? "s" : ""})` : "Copier pour Excel";
   $("copyExcelBtn").disabled = !fresh;
   $("excelHint").textContent = !started
@@ -820,10 +959,10 @@ function renderExcelHint() {
 }
 
 async function copyZones(all) {
-  const lines = all ? state.order : state.order.filter(l => !l.copied);
+  const lines = all ? curOrder().lines : curOrder().lines.filter(l => !l.copied);
   if (!lines.length) return;
   // En-tete seulement au premier collage (ou quand on recopie tout)
-  const withHeader = all || !state.order.some(l => l.copied);
+  const withHeader = all || !curOrder().lines.some(l => l.copied);
   const ok = await copyRich(zonesClipboard(lines, withHeader));
   if (!ok) { toast("Copie impossible sur ce navigateur"); return; }
   lines.forEach(l => l.copied = true);
@@ -837,6 +976,7 @@ function renderCatalog() {
   $("productType").value = p.type;
   $("productLambda").value = p.lambda ?? "";
   $("productPacksMP").value = p.packsPerMP ?? "";
+  $("productPriceDate").value = p.priceDate || "";
   $("catalogSub").textContent = `${state.products.length} produit${state.products.length > 1 ? "s" : ""}`;
   const rows = [...p.thicknesses].sort((a, b) => a.t - b.t);
   $("thicknessRows").innerHTML = rows.length ? rows.map(x => `
@@ -863,7 +1003,7 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
-function refreshAll() { renderProductPicker(); renderCatalog(); renderResults(); renderOrder(); saveState(); }
+function refreshAll() { renderProductPicker(); renderCatalog(); renderResults(); renderOrder(); saveState(); renderBackupHint(); }
 
 // ===== Evenements : calcul =====
 $("productSelect").addEventListener("change", e => { state.currentId = e.target.value; refreshAll(); });
@@ -881,24 +1021,140 @@ function setMode(m) {
 ["target", "maxLayers", "tolMinus", "tolPlus"].forEach(id =>
   $(id).addEventListener("input", () => { renderResults(); saveState(); })
 );
-$("surface").addEventListener("input", saveState);
+$("surface").addEventListener("input", () => { renderSurfaceCalc(); saveState(); });
+$("sortMode").addEventListener("change", () => { renderResults(); saveState(); });
 
 $("results").addEventListener("click", e => {
   const btn = e.target.closest("[data-add]");
   if (btn) addToOrder(btn.dataset.add.split(",").map(Number));
 });
 
+// ===== Fenetre de dialogue maison =====
+// openModal({ title, text, fields: [{ id, label, value, type, placeholder }], buttons: [{ label, value, primary, danger }] })
+// Renvoie une promesse : { button, values } ou null si on ferme.
+// validate(values) peut renvoyer un message d'erreur pour bloquer la validation.
+function openModal({ title, text = "", fields = [], buttons = [{ label: "OK", value: "ok", primary: true }], validate }) {
+  return new Promise(resolve => {
+    $("modalTitle").textContent = title;
+    $("modalText").textContent = text;
+    $("modalText").classList.toggle("hidden", !text);
+    $("modalError").textContent = "";
+    $("modalFields").innerHTML = fields.map(f => `
+      <label>${escapeHtml(f.label)}
+        <input data-mid="${f.id}" type="${f.type || "text"}" value="${escapeHtml(f.value ?? "")}"
+               placeholder="${escapeHtml(f.placeholder || "")}" ${f.inputmode ? `inputmode="${f.inputmode}"` : ""} autocomplete="off">
+      </label>`).join("");
+    $("modalButtons").innerHTML = buttons.map((b, i) =>
+      `<button class="btn ${b.primary ? "primary" : ""} ${b.ghost ? "ghost" : ""}" data-mb="${i}"
+        ${b.danger ? 'style="background:#dc2626;border-color:#dc2626;color:#fff"' : ""}>${escapeHtml(b.label)}</button>`).join("");
+    $("modal").classList.remove("hidden");
+    const first = $("modalFields").querySelector("input");
+    (first || $("modalButtons").querySelector(".primary") || $("modalButtons").querySelector("button")).focus();
+    if (first) first.select();
+
+    const values = () => Object.fromEntries([...$("modalFields").querySelectorAll("input")].map(i => [i.dataset.mid, i.value]));
+    const close = result => {
+      $("modal").classList.add("hidden");
+      $("modal").removeEventListener("click", onClick);
+      document.removeEventListener("keydown", onKey);
+      resolve(result);
+    };
+    const choose = i => {
+      const b = buttons[i];
+      const v = values();
+      // On ne valide les champs que pour le bouton principal
+      if (b.primary && validate) {
+        const err = validate(v);
+        if (err) { $("modalError").textContent = err; return; }
+      }
+      close({ button: b.value, values: v });
+    };
+    const onClick = e => {
+      if (e.target === $("modal")) return close(null);
+      const btn = e.target.closest("[data-mb]");
+      if (btn) choose(Number(btn.dataset.mb));
+    };
+    const onKey = e => {
+      if (e.key === "Escape") close(null);
+      if (e.key === "Enter" && e.target.tagName === "INPUT") {
+        const p = buttons.findIndex(b => b.primary);
+        if (p >= 0) { e.preventDefault(); choose(p); }
+      }
+    };
+    $("modal").addEventListener("click", onClick);
+    document.addEventListener("keydown", onKey);
+  });
+}
+
+async function confirmModal(title, text, okLabel = "Confirmer", danger = false) {
+  const r = await openModal({ title, text, buttons: [
+    { label: "Annuler", value: "cancel", ghost: true },
+    { label: okLabel, value: "ok", primary: !danger, danger }
+  ] });
+  return !!r && r.button === "ok";
+}
+
+async function askText(title, label, value = "", placeholder = "") {
+  const r = await openModal({
+    title, fields: [{ id: "v", label, value, placeholder }],
+    buttons: [{ label: "Annuler", value: "cancel", ghost: true }, { label: "OK", value: "ok", primary: true }],
+    validate: v => v.v.trim() ? "" : "Ce champ ne peut pas être vide."
+  });
+  return r && r.button === "ok" ? r.values.v.trim() : null;
+}
+
 // ===== Evenements : commande =====
 $("orderLines").addEventListener("click", e => {
-  const btn = e.target.closest("[data-remove]");
-  if (!btn) return;
-  state.order = state.order.filter(l => l.id !== btn.dataset.remove);
+  const del = e.target.closest("[data-remove]");
+  if (del) {
+    curOrder().lines = curOrder().lines.filter(l => l.id !== del.dataset.remove);
+    renderOrder(); saveState();
+    return;
+  }
+  const row = e.target.closest("[data-edit]");
+  if (row) editLine(row.dataset.edit);
+});
+
+// Modifier une zone (surface, facade, etage) sans devoir la supprimer et la refaire
+async function editLine(id) {
+  const l = curOrder().lines.find(x => x.id === id);
+  if (!l) return;
+  const r = await openModal({
+    title: "Modifier la zone",
+    text: `${comboLabel(l.layers)} mm${l.copied ? " · déjà copiée dans Excel : pense à corriger aussi ta ligne là-bas." : ""}`,
+    fields: [
+      { id: "surface", label: "Surface (m²) — un calcul est accepté", value: String(l.surface).replace(".", ","), inputmode: "decimal" },
+      { id: "facade", label: "Façade", value: l.facade || "" },
+      { id: "etage", label: "Étage", value: l.etage || "" }
+    ],
+    buttons: [
+      { label: "Supprimer", value: "delete", ghost: true },
+      { label: "Annuler", value: "cancel", ghost: true },
+      { label: "Enregistrer", value: "ok", primary: true }
+    ],
+    validate: v => {
+      const s = evalSurface(v.surface);
+      return !s || isNaN(s) || s <= 0 ? "Surface invalide." : "";
+    }
+  });
+  if (!r || r.button === "cancel") return;
+  if (r.button === "delete") {
+    curOrder().lines = curOrder().lines.filter(x => x.id !== id);
+  } else {
+    l.surface = evalSurface(r.values.surface);
+    l.facade = r.values.facade.trim();
+    l.etage = r.values.etage.trim();
+  }
+  renderOrder(); saveState();
+}
+
+$("waste").addEventListener("input", () => {
+  curOrder().waste = Math.max(0, Number($("waste").value) || 0);
   renderOrder(); saveState();
 });
-$("waste").addEventListener("input", () => { renderOrder(); saveState(); });
-$("clearOrderBtn").addEventListener("click", () => {
-  if (!confirm("Vider toute la commande ?")) return;
-  state.order = [];
+$("clearOrderBtn").addEventListener("click", async () => {
+  if (!await confirmModal("Vider la commande ?", `Toutes les zones de « ${curOrder().name} » seront retirées.`, "Vider", true)) return;
+  curOrder().lines = [];
   renderOrder(); saveState();
 });
 $("copyExcelBtn").addEventListener("click", () => copyZones(false));
@@ -914,9 +1170,35 @@ $("copyOrderBtn").addEventListener("click", async () => {
     await navigator.clipboard.writeText(txt);
     toast("Commande copiée");
   } catch (e) {
-    // Repli si le presse-papier est refuse : on affiche le texte a copier a la main
-    prompt("Copie ce texte :", txt);
+    // Repli si le presse-papier est refuse : on montre le texte a copier a la main
+    openModal({ title: "Copie ce texte", text: txt, buttons: [{ label: "Fermer", value: "ok", primary: true }] });
   }
+});
+
+// Commandes nommees : une par tache / chantier
+$("orderSelect").addEventListener("change", e => { state.currentOrderId = e.target.value; renderOrder(); saveState(); });
+$("newOrderBtn").addEventListener("click", async () => {
+  const name = await askText("Nouvelle commande", "Nom", "", "ex. Chantier X – Façades");
+  if (!name) return;
+  const o = newOrder(name);
+  state.orders.push(o);
+  state.currentOrderId = o.id;
+  renderOrder(); saveState();
+  toast(`Commande « ${name} » créée`);
+});
+$("renameOrderBtn").addEventListener("click", async () => {
+  const name = await askText("Renommer la commande", "Nom", curOrder().name);
+  if (!name) return;
+  curOrder().name = name;
+  renderOrder(); saveState();
+});
+$("deleteOrderBtn").addEventListener("click", async () => {
+  const o = curOrder();
+  if (!await confirmModal("Supprimer la commande ?", `« ${o.name} » et ses ${o.lines.length} zone(s) seront supprimées.`, "Supprimer", true)) return;
+  state.orders = state.orders.filter(x => x.id !== o.id);
+  if (!state.orders.length) state.orders.push(newOrder("Commande 1"));
+  state.currentOrderId = state.orders[0].id;
+  renderOrder(); saveState();
 });
 
 // ===== Evenements : catalogue =====
@@ -927,6 +1209,10 @@ $("productLambda").addEventListener("input", e => {
 });
 $("productPacksMP").addEventListener("input", e => {
   currentProduct().packsPerMP = Number(e.target.value) || null;
+  renderOrder(); saveState();
+});
+$("productPriceDate").addEventListener("input", e => {
+  currentProduct().priceDate = e.target.value || null;
   renderOrder(); saveState();
 });
 
@@ -942,7 +1228,9 @@ $("thicknessRows").addEventListener("input", e => {
     renderProductPicker(); renderResults();
   } else {
     item[field] = e.target.value === "" ? null : Number(e.target.value);
-    renderOrder();
+    // Un prix modifie a la main = prix releve aujourd'hui
+    if (field === "price") { currentProduct().priceDate = todayIso(); $("productPriceDate").value = todayIso(); }
+    renderResults(); renderOrder();
   }
   saveState();
 });
@@ -965,14 +1253,22 @@ $("addThicknessBtn").addEventListener("click", () => {
 });
 $("newThickness").addEventListener("keydown", e => { if (e.key === "Enter") $("addThicknessBtn").click(); });
 
-$("newProductBtn").addEventListener("click", () => {
-  const name = prompt("Nom du produit (ex. Flumroc Dämmplatte 3) :");
-  if (!name) return;
-  const raw = prompt("Épaisseurs disponibles en mm, séparées par des virgules :", "40, 60, 80, 100, 120");
-  const list = (raw || "").split(/[,;\s]+/).map(Number).filter(n => n > 0);
+$("newProductBtn").addEventListener("click", async () => {
+  const r = await openModal({
+    title: "Nouveau produit",
+    text: "Astuce : pour reprendre une fiche technique, utilise plutôt « Importer un tableau ».",
+    fields: [
+      { id: "name", label: "Nom du produit", placeholder: "ex. Flumroc Dämmplatte 3" },
+      { id: "list", label: "Épaisseurs disponibles (mm, séparées par des virgules)", value: "40, 60, 80, 100, 120" }
+    ],
+    buttons: [{ label: "Annuler", value: "cancel", ghost: true }, { label: "Créer", value: "ok", primary: true }],
+    validate: v => !v.name.trim() ? "Donne un nom au produit." : ""
+  });
+  if (!r || r.button !== "ok") return;
+  const list = r.values.list.split(/[,;\s]+/).map(Number).filter(n => n > 0).map(Math.round);
   const id = "p" + Date.now();
   state.products.push({
-    id, name, type: "semi-rigide", lambda: null, packsPerMP: null,
+    id, name: r.values.name.trim(), type: "semi-rigide", lambda: null, packsPerMP: null, priceDate: null,
     thicknesses: [...new Set(list)].map(t => ({ t, on: true, m2Pack: null, price: null }))
   });
   state.currentId = id;
@@ -980,24 +1276,98 @@ $("newProductBtn").addEventListener("click", () => {
   toast("Pense à renseigner les m² par paquet");
 });
 
-$("renameProductBtn").addEventListener("click", () => {
+$("renameProductBtn").addEventListener("click", async () => {
   const p = currentProduct();
-  const name = prompt("Nouveau nom :", p.name);
+  const name = await askText("Renommer le produit", "Nom", p.name);
   if (name) { p.name = name; refreshAll(); }
 });
 
-$("deleteProductBtn").addEventListener("click", () => {
-  if (state.products.length <= 1) { alert("Il faut garder au moins un produit."); return; }
+$("deleteProductBtn").addEventListener("click", async () => {
+  if (state.products.length <= 1) {
+    await openModal({ title: "Impossible", text: "Il faut garder au moins un produit.", buttons: [{ label: "OK", value: "ok", primary: true }] });
+    return;
+  }
   const p = currentProduct();
-  if (!confirm(`Supprimer « ${p.name} » ?`)) return;
+  if (!await confirmModal("Supprimer le produit ?", `« ${p.name} » sera retiré du catalogue.`, "Supprimer", true)) return;
   state.products = state.products.filter(x => x.id !== p.id);
   state.currentId = state.products[0].id;
   refreshAll();
 });
 
-$("resetBtn").addEventListener("click", () => {
-  if (!confirm("Revenir au catalogue d'origine ? Tes produits ajoutés et la commande seront perdus.")) return;
+$("resetBtn").addEventListener("click", async () => {
+  if (!await confirmModal("Tout réinitialiser ?",
+    "Retour au catalogue d'origine. Tes produits ajoutés et toutes tes commandes seront perdus. Pense à sauvegarder avant !",
+    "Réinitialiser", true)) return;
   state = freshState();
+  refreshAll();
+});
+
+// ===== Sauvegarde / restauration =====
+// Tout vit dans le navigateur : un fichier .json permet de ne rien perdre,
+// de passer du telephone au PC ou de donner son catalogue a un collegue.
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function renderBackupHint() {
+  const n = state.orders.reduce((s, o) => s + o.lines.length, 0);
+  const last = state.lastBackup ? `Dernière sauvegarde : ${frDate(state.lastBackup)}.` : "Aucune sauvegarde pour l'instant.";
+  $("backupHint").textContent = `${last} Tes données (${state.products.length} produit${state.products.length > 1 ? "s" : ""}, ${state.orders.length} commande${state.orders.length > 1 ? "s" : ""}, ${n} zone${n > 1 ? "s" : ""}) ne vivent que dans ce navigateur : sauvegarde-les dans un fichier de temps en temps.`;
+}
+
+$("backupBtn").addEventListener("click", () => {
+  state.lastBackup = todayIso();
+  saveState();
+  const data = { app: "strate", version: 5, savedAt: new Date().toISOString(), state };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `strate-sauvegarde-${todayIso()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  renderBackupHint();
+  toast("Sauvegarde téléchargée");
+});
+
+$("restoreBtn").addEventListener("click", () => $("restoreFile").click());
+
+$("restoreFile").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (err) { toast("Fichier illisible"); return; }
+  const s = data && data.app === "strate" && data.state;
+  if (!s || !Array.isArray(s.products) || !s.products.length) { toast("Ce fichier n'est pas une sauvegarde Strate"); return; }
+  const incoming = migrate(structuredClone(s));
+  const nZones = incoming.orders.reduce((t, o) => t + o.lines.length, 0);
+  const r = await openModal({
+    title: "Restaurer la sauvegarde",
+    text: `Fichier du ${data.savedAt ? frDate(data.savedAt.slice(0, 10)) : "?"} : ${incoming.products.length} produit(s), ${incoming.orders.length} commande(s), ${nZones} zone(s).`
+      + " « Tout remplacer » écrase tes données actuelles. « Ajouter les produits » récupère seulement les produits qui te manquent (pratique pour le catalogue d'un collègue).",
+    buttons: [
+      { label: "Annuler", value: "cancel", ghost: true },
+      { label: "Ajouter les produits", value: "merge" },
+      { label: "Tout remplacer", value: "replace", primary: true }
+    ]
+  });
+  if (!r || r.button === "cancel") return;
+  if (r.button === "replace") {
+    state = incoming;
+    toast("Sauvegarde restaurée");
+  } else {
+    // Fusion : on ajoute les produits absents (meme nom = deja present)
+    const names = new Set(state.products.map(p => p.name.toLowerCase()));
+    const added = incoming.products.filter(p => !names.has(p.name.toLowerCase()));
+    added.forEach(p => { if (state.products.some(x => x.id === p.id)) p.id = "p" + Date.now() + Math.floor(Math.random() * 1000); state.products.push(p); });
+    toast(added.length ? `${added.length} produit(s) ajouté(s)` : "Aucun nouveau produit dans ce fichier");
+  }
+  restoreInputs();
   refreshAll();
 });
 
@@ -1172,6 +1542,8 @@ $("doImportBtn").addEventListener("click", () => {
     ["m2Pack", "price", "packsPerMP"].forEach(k => { if (r[k] != null) item[k] = r[k]; });
   });
   // Si toutes les epaisseurs ont le meme nb de paquets par multipac, on le met au niveau du produit
+  // Prix importes = prix du jour de l'import
+  if (rows.some(r => r.price != null)) p.priceDate = todayIso();
   const mps = [...new Set(rows.map(r => r.packsPerMP).filter(Boolean))];
   if (mps.length === 1 && p.packsPerMP == null) p.packsPerMP = mps[0];
   state.currentId = p.id;
@@ -1182,19 +1554,26 @@ $("doImportBtn").addEventListener("click", () => {
 });
 
 // ===== Demarrage : on restaure les dernieres saisies =====
-const inp = state.inputs || {};
-if (inp.target) $("target").value = inp.target;
-if (inp.maxLayers) $("maxLayers").value = inp.maxLayers;
-if (inp.tolMinus !== undefined && inp.tolMinus !== "") $("tolMinus").value = inp.tolMinus;
-if (inp.tolPlus !== undefined && inp.tolPlus !== "") $("tolPlus").value = inp.tolPlus;
-if (inp.surface) $("surface").value = inp.surface;
-if (inp.facade) $("facade").value = inp.facade;
-if (inp.etage) $("etage").value = inp.etage;
-if (inp.waste !== undefined && inp.waste !== "") $("waste").value = inp.waste;
+// Remet dans les champs les dernieres saisies (au demarrage et apres une restauration)
+function restoreInputs() {
+  const inp = state.inputs || {};
+  if (inp.target) $("target").value = inp.target;
+  if (inp.maxLayers) $("maxLayers").value = inp.maxLayers;
+  if (inp.tolMinus !== undefined && inp.tolMinus !== "") $("tolMinus").value = inp.tolMinus;
+  if (inp.tolPlus !== undefined && inp.tolPlus !== "") $("tolPlus").value = inp.tolPlus;
+  if (inp.sortMode) $("sortMode").value = inp.sortMode;
+  $("surface").value = inp.surface || "";
+  $("facade").value = inp.facade || "";
+  $("etage").value = inp.etage || "";
+  renderSurfaceCalc();
+  setMode(inp.mode || "combo");
+}
+
+restoreInputs();
 renderProductPicker();
 renderCatalog();
 renderOrder();
-setMode(inp.mode || "combo");
+renderBackupHint();
 </script>
 </body>
 </html>
