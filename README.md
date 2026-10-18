@@ -13,9 +13,21 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **V5** : sauvegarde / restauration dans un fichier (avec fusion du catalogue d'un collègue), commandes nommées, prix CHF/m² par combinaison et tri « le moins cher », zones modifiables, date des prix, surface saisie sous forme de calcul (12,5*3,2+8).
 - **V6-V7** : affichage soigné en mode sombre, deux colonnes sur PC, bouton de thème Auto / Clair / Sombre, bon de commande PDF classé par façade puis par étage.
 - **V8** : choix du produit à modifier directement dans le catalogue, masse volumique (kg/m³) avec type déduit automatiquement.
+- **V9** : code découpé en fichiers + tests automatiques (aucun changement visible).
 - Le catalogue (m²/paquet et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
-## Utilisation
+## Organisation du code
 
-Une seule page : `index.html`. Hébergeable telle quelle avec GitHub Pages.
+- `index.html` : la page (structure).
+- `styles.css` : l'apparence.
+- `js/core.js` : les calculs (combinaisons, prix, commande, import…), sans lien avec la page : c'est la partie testée.
+- `js/app.js` : l'interface (boutons, affichage, sauvegarde dans le navigateur).
+- `tests/core.test.js` : les tests automatiques.
+
+Hébergé tel quel avec GitHub Pages, aucune installation nécessaire.
+
+## Tests
+
+`npm test` (ou `node --test`) vérifie les calculs : combinaisons, classement, paquets, import, migration des anciennes sauvegardes…
+Ils tournent aussi automatiquement sur GitHub à chaque modification (onglet « Actions ») : une coche verte sur la demande de fusion = rien de cassé.
 

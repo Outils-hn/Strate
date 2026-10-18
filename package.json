@@ -1,0 +1,9 @@
+{
+  "name": "strate",
+  "version": "9.0.0",
+  "private": true,
+  "description": "Combinaisons d'epaisseurs d'isolation et commande",
+  "scripts": {
+    "test": "node --test"
+  }
+}
