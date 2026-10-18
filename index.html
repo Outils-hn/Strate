@@ -153,6 +153,14 @@
   .order-line:last-child { border-bottom: none; }
   .order-line b { font-weight: 600; }
   h3 { font-size: 14px; margin: 16px 0 4px; color: var(--muted); font-weight: 500; }
+  .import-panel { margin-top: 16px; padding: 14px; border: 1px dashed var(--accent); border-radius: var(--radius); }
+  textarea {
+    width: 100%; font: 13px/1.4 ui-monospace, Consolas, monospace; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; resize: vertical;
+  }
+  .preview td, .preview th { font-size: 13px; }
+  .preview select { padding: 4px 6px; font-size: 12px; min-width: 110px; }
+  .preview tr.skip td { opacity: 0.35; text-decoration: line-through; }
   .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .toast.show { opacity: 1; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 24px; }
@@ -273,10 +281,47 @@
       <button class="btn small" id="deleteProductBtn">Supprimer</button>
       <button class="btn small ghost" id="resetBtn">Réinitialiser</button>
     </div>
+    <div class="row">
+      <button class="btn primary small" id="openImportBtn">Importer un tableau</button>
+    </div>
+
+    <!-- Import d'un tableau colle (fiche technique, Excel, Power Query) -->
+    <div id="importPanel" class="import-panel hidden">
+      <h3 style="margin-top:0">Importer un tableau</h3>
+      <p class="hint" style="margin-top:0">Colle ici le tableau de la fiche technique : copié depuis le PDF, depuis Excel ou depuis Power Query.</p>
+      <textarea id="importText" rows="6" placeholder="Colle le tableau ici (Ctrl + V)"></textarea>
+      <div id="importPreview"></div>
+      <div id="importTarget" class="hidden">
+        <div class="grid" style="margin-top:12px">
+          <label>Destination
+            <select id="importDest"></select>
+          </label>
+          <label class="import-new">Nom du produit
+            <input id="importName" type="text" placeholder="ex. Flumroc Dämmplatte 3">
+          </label>
+          <label class="import-new">Type
+            <select id="importType">
+              <option value="souple">Souple</option>
+              <option value="semi-rigide" selected>Semi-rigide</option>
+              <option value="rigide">Rigide</option>
+            </select>
+          </label>
+          <label class="import-new">λ (W/m·K)
+            <input id="importLambda" type="number" step="0.001" min="0" placeholder="ex. 0,031" inputmode="decimal">
+          </label>
+        </div>
+      </div>
+      <p class="hint" id="importMsg"></p>
+      <div class="row">
+        <button class="btn primary" id="doImportBtn" disabled>Importer</button>
+        <button class="btn small" id="transposeBtn">Inverser lignes / colonnes</button>
+        <button class="btn small ghost" id="cancelImportBtn">Annuler</button>
+      </div>
+    </div>
   </details>
 </main>
 
-<footer>Strate · V3</footer>
+<footer>Strate · V4</footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -953,6 +998,186 @@ $("deleteProductBtn").addEventListener("click", () => {
 $("resetBtn").addEventListener("click", () => {
   if (!confirm("Revenir au catalogue d'origine ? Tes produits ajoutés et la commande seront perdus.")) return;
   state = freshState();
+  refreshAll();
+});
+
+// ===== Import d'un tableau colle =====
+// Etapes : texte colle -> grille de cellules -> l'utilisateur dit quelle colonne
+// contient quoi -> on cree ou met a jour un produit.
+const ROLES = [
+  { key: "", label: "Ignorer" },
+  { key: "t", label: "Épaisseur (mm)" },
+  { key: "m2Pack", label: "m² / paquet" },
+  { key: "price", label: "Prix CHF/m²" },
+  { key: "packsPerMP", label: "Paquets / multipac" }
+];
+let importGrid = [];   // lignes x colonnes (texte)
+let importRoles = [];  // role choisi pour chaque colonne
+
+// Transforme le texte colle en grille.
+// - depuis Excel / Power Query : colonnes separees par des tabulations
+// - depuis un PDF : souvent de simples espaces -> on coupe sur les espaces
+function parsePasted(raw) {
+  const lines = raw.replace(/\r/g, "").split("\n").map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return [];
+  if (lines.some(l => l.includes("\t"))) return lines.map(l => l.split("\t").map(c => c.trim()));
+  return lines.map(l => l
+    .replace(/(\d)\s*mm\b/gi, "$1")   // "40 mm" -> "40" pour ne pas creer une colonne "mm"
+    .split(/\s+/).filter(Boolean));
+}
+
+// Lit un nombre ecrit a la francaise, a la suisse ou a l'anglaise : "7,50" "1'035.30" "40 mm"
+function parseNum(cell) {
+  if (cell == null) return NaN;
+  let s = String(cell).replace(/mm|m²|m2|chf|fr\.?/gi, "").replace(/['’\s  ]/g, "");
+  if (/^\d+,\d+$/.test(s)) s = s.replace(",", ".");
+  else s = s.replace(/,(?=\d{3}\b)/g, "").replace(",", ".");
+  return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
+}
+
+// Devine le role de chaque colonne : d'abord grace a l'en-tete (francais ou allemand),
+// sinon grace aux valeurs (la colonne epaisseur = entiers croissants entre 10 et 500)
+function guessRoles(grid) {
+  const cols = Math.max(...grid.map(r => r.length));
+  const roles = Array(cols).fill("");
+  const header = grid[0].map(c => c.toLowerCase());
+  const headerIsText = grid[0].filter(c => isNaN(parseNum(c))).length >= Math.ceil(cols / 2);
+  if (headerIsText) {
+    header.forEach((h, i) => {
+      if (!roles.includes("t") && /(épaisseur|epaisseur|dicke|stärke|staerke|^mm$|ép\.)/.test(h)) roles[i] = "t";
+      else if (!roles.includes("price") && /(prix|preis|chf|fr\.)/.test(h)) roles[i] = "price";
+      else if (!roles.includes("packsPerMP") && /(multipa|\bmp\b|ep\s*\/\s*mp|pakete\s*\/\s*mp)/.test(h)) roles[i] = "packsPerMP";
+      else if (!roles.includes("m2Pack") && /(m²|m2)/.test(h) && /(paquet|paket|\bep\b|emballage|colis|pack)/.test(h)) roles[i] = "m2Pack";
+    });
+  }
+  if (!roles.includes("t")) {
+    const body = headerIsText ? grid.slice(1) : grid;
+    for (let i = 0; i < cols; i++) {
+      const v = body.map(r => parseNum(r[i])).filter(n => !isNaN(n));
+      const looksLikeThickness = v.length >= 2 && v.length >= body.length * 0.6 &&
+        v.every(n => Number.isInteger(n) && n >= 10 && n <= 500) &&
+        v.every((n, k) => k === 0 || n > v[k - 1]);
+      if (looksLikeThickness) { roles[i] = "t"; break; }
+    }
+  }
+  return roles;
+}
+
+function importRows() {
+  // Lignes retenues : celles dont la colonne epaisseur contient un nombre
+  const ti = importRoles.indexOf("t");
+  if (ti < 0) return [];
+  return importGrid.map((r, idx) => {
+    const t = parseNum(r[ti]);
+    if (isNaN(t) || t <= 0) return null;
+    const item = { t: Math.round(t), idx };
+    importRoles.forEach((role, i) => {
+      if (role && role !== "t") { const n = parseNum(r[i]); if (!isNaN(n)) item[role] = n; }
+    });
+    return item;
+  }).filter(Boolean);
+}
+
+function renderImport() {
+  const prev = $("importPreview");
+  if (!importGrid.length) {
+    prev.innerHTML = ""; $("importTarget").classList.add("hidden");
+    $("importMsg").textContent = ""; $("doImportBtn").disabled = true;
+    return;
+  }
+  const cols = Math.max(...importGrid.map(r => r.length));
+  const kept = new Set(importRows().map(r => r.idx));
+  const show = importGrid.slice(0, 15);
+  prev.innerHTML = `<div class="table-wrap preview"><table>
+    <thead><tr>${Array.from({ length: cols }, (_, i) => `<th><select data-col="${i}">${ROLES.map(r =>
+      `<option value="${r.key}" ${importRoles[i] === r.key ? "selected" : ""}>${r.label}</option>`).join("")}</select></th>`).join("")}</tr></thead>
+    <tbody>${show.map((r, idx) => `<tr class="${kept.has(idx) ? "" : "skip"}">${Array.from({ length: cols }, (_, i) =>
+      `<td>${escapeHtml(r[i] ?? "")}</td>`).join("")}</tr>`).join("")}</tbody>
+  </table></div>${importGrid.length > 15 ? `<p class="hint">… et ${importGrid.length - 15} lignes de plus</p>` : ""}`;
+
+  const rows = importRows();
+  $("importTarget").classList.toggle("hidden", !rows.length);
+  $("doImportBtn").disabled = !rows.length;
+  const roleNames = importRoles.filter(Boolean).map(k => ROLES.find(r => r.key === k).label);
+  $("importMsg").textContent = !importRoles.includes("t")
+    ? "Choisis quelle colonne contient l'épaisseur (menus au-dessus du tableau)."
+    : rows.length
+      ? `${rows.length} épaisseur${rows.length > 1 ? "s" : ""} détectée${rows.length > 1 ? "s" : ""} : ${rows.map(r => r.t).join(", ")} mm · colonnes lues : ${roleNames.join(", ")}. Les lignes barrées sont ignorées.`
+      : "Aucune épaisseur lisible dans la colonne choisie.";
+
+  // Destination : nouveau produit ou mise a jour d'un produit existant
+  const dest = $("importDest");
+  const cur = dest.value || "__new";
+  dest.innerHTML = `<option value="__new">Nouveau produit</option>` +
+    state.products.map(p => `<option value="${p.id}">Mettre à jour : ${escapeHtml(p.name)}</option>`).join("");
+  dest.value = [...dest.options].some(o => o.value === cur) ? cur : "__new";
+  document.querySelectorAll(".import-new").forEach(el => el.classList.toggle("hidden", dest.value !== "__new"));
+}
+
+function loadImportText() {
+  importGrid = parsePasted($("importText").value);
+  importRoles = importGrid.length ? guessRoles(importGrid) : [];
+  renderImport();
+}
+
+function resetImport() {
+  $("importText").value = ""; $("importName").value = ""; $("importLambda").value = "";
+  importGrid = []; importRoles = [];
+  renderImport();
+}
+
+$("openImportBtn").addEventListener("click", () => {
+  $("importPanel").classList.remove("hidden");
+  $("importText").focus();
+});
+$("cancelImportBtn").addEventListener("click", () => { resetImport(); $("importPanel").classList.add("hidden"); });
+$("importText").addEventListener("input", loadImportText);
+$("importPreview").addEventListener("change", e => {
+  const col = e.target.dataset.col;
+  if (col == null) return;
+  // Un role ne peut etre attribue qu'a une seule colonne
+  const role = e.target.value;
+  if (role) importRoles = importRoles.map(r => r === role ? "" : r);
+  importRoles[Number(col)] = role;
+  renderImport();
+});
+$("importDest").addEventListener("change", renderImport);
+$("transposeBtn").addEventListener("click", () => {
+  // Certaines fiches mettent les epaisseurs en colonnes : on fait pivoter le tableau
+  if (!importGrid.length) return;
+  const cols = Math.max(...importGrid.map(r => r.length));
+  importGrid = Array.from({ length: cols }, (_, i) => importGrid.map(r => r[i] ?? ""));
+  importRoles = guessRoles(importGrid);
+  renderImport();
+});
+
+$("doImportBtn").addEventListener("click", () => {
+  const rows = importRows();
+  if (!rows.length) return;
+  const destId = $("importDest").value;
+  let p;
+  if (destId === "__new") {
+    const name = $("importName").value.trim();
+    if (!name) { $("importName").focus(); toast("Donne un nom au produit"); return; }
+    p = { id: "p" + Date.now(), name, type: $("importType").value,
+          lambda: Number($("importLambda").value) || null, packsPerMP: null, thicknesses: [] };
+    state.products.push(p);
+  } else {
+    p = state.products.find(x => x.id === destId);
+  }
+  // Fusion : on met a jour les epaisseurs existantes, on ajoute les nouvelles
+  rows.forEach(r => {
+    let item = p.thicknesses.find(x => x.t === r.t);
+    if (!item) { item = { t: r.t, on: true, m2Pack: null, price: null }; p.thicknesses.push(item); }
+    ["m2Pack", "price", "packsPerMP"].forEach(k => { if (r[k] != null) item[k] = r[k]; });
+  });
+  // Si toutes les epaisseurs ont le meme nb de paquets par multipac, on le met au niveau du produit
+  const mps = [...new Set(rows.map(r => r.packsPerMP).filter(Boolean))];
+  if (mps.length === 1 && p.packsPerMP == null) p.packsPerMP = mps[0];
+  state.currentId = p.id;
+  toast(`${rows.length} épaisseur${rows.length > 1 ? "s" : ""} importée${rows.length > 1 ? "s" : ""} dans « ${p.name} »`);
+  resetImport();
+  $("importPanel").classList.add("hidden");
   refreshAll();
 });
 
