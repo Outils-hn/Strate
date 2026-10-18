@@ -197,6 +197,7 @@
   th { font-weight: 500; color: var(--muted); font-size: 12px; }
   td.num, th.num { text-align: right; }
   td input { padding: 5px 7px; min-width: 70px; }
+  td input[type="checkbox"] { min-width: 0; padding: 0; }
   tr.off td:not(:first-child) { opacity: 0.45; }
   tfoot td { font-weight: 600; border-bottom: none; }
   .order-line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); align-items: center; }
@@ -319,7 +320,18 @@
   <!-- Catalogue (replie par defaut : on y touche rarement) -->
   <details class="card" id="catalogCard">
     <summary><span>Gérer le catalogue <span class="summary-sub" id="catalogSub"></span></span></summary>
-    <div class="grid">
+    <label>Produit à modifier
+      <select id="catalogProductSelect"></select>
+    </label>
+    <div class="row" style="margin-top:8px">
+      <button class="btn small" id="newProductBtn">+ Nouveau produit</button>
+      <button class="btn small" id="renameProductBtn">Renommer</button>
+      <button class="btn small ghost" id="deleteProductBtn">Supprimer</button>
+    </div>
+    <div class="grid" style="margin-top:14px">
+      <label>Masse volumique (kg/m³)
+        <input id="productDensity" type="number" step="1" min="0" placeholder="ex. 40" inputmode="numeric">
+      </label>
       <label>Type
         <select id="productType">
           <option value="souple">Souple</option>
@@ -334,9 +346,10 @@
         <input id="productPacksMP" type="number" min="0" step="1" inputmode="numeric">
       </label>
       <label>Prix relevés le
-        <input id="productPriceDate" type="date">
+        <input id="productPriceDate" type="text" placeholder="jj.mm.aaaa" inputmode="numeric" autocomplete="off">
       </label>
     </div>
+    <p class="hint" id="densityHint"></p>
     <p class="hint">Décoche une épaisseur pour l'exclure des calculs (rupture de stock…). Les m² par paquet et le prix servent à la commande.</p>
     <div class="table-wrap">
       <table>
@@ -349,13 +362,8 @@
       <button class="btn" id="addThicknessBtn">Ajouter</button>
     </div>
     <div class="row">
-      <button class="btn small" id="newProductBtn">Nouveau produit</button>
-      <button class="btn small" id="renameProductBtn">Renommer</button>
-      <button class="btn small" id="deleteProductBtn">Supprimer</button>
-      <button class="btn small ghost" id="resetBtn">Réinitialiser</button>
-    </div>
-    <div class="row">
       <button class="btn primary small" id="openImportBtn">Importer un tableau</button>
+      <button class="btn small ghost" id="resetBtn">Réinitialiser</button>
     </div>
 
     <!-- Import d'un tableau colle (fiche technique, Excel, Power Query) -->
@@ -371,6 +379,9 @@
           </label>
           <label class="import-new">Nom du produit
             <input id="importName" type="text" placeholder="ex. Flumroc Dämmplatte 3">
+          </label>
+          <label class="import-new">Masse volumique (kg/m³)
+            <input id="importDensity" type="number" step="1" min="0" placeholder="ex. 40" inputmode="numeric">
           </label>
           <label class="import-new">Type
             <select id="importType">
@@ -437,7 +448,7 @@
   </div>
 </main>
 
-<footer>Strate · V7</footer>
+<footer>Strate · V8</footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -463,6 +474,7 @@ const DEFAULT_PRODUCTS = [
     name: "Isover ISORESIST 1000 031 F",
     type: "semi-rigide",
     lambda: 0.031,
+    density: 40,
     packsPerMP: 12,
     priceDate: "2026-10-18",
     thicknesses: [
@@ -535,6 +547,7 @@ function migrate(s) {
     const def = DEFAULT_PRODUCTS.find(d => d.id === p.id);
     if (def && p.packsPerMP == null) p.packsPerMP = def.packsPerMP;
     if (def && p.priceDate == null) p.priceDate = def.priceDate;
+    if (def && p.density == null) p.density = def.density;
     p.thicknesses.forEach(item => {
       const d = def && def.thicknesses.find(x => x.t === item.t);
       if (d) {
@@ -629,7 +642,7 @@ function renderProductPicker() {
   const on = p.thicknesses.filter(x => x.on).map(x => x.t).sort((a, b) => a - b);
   const typeLabel = { "souple": "souple", "semi-rigide": "semi-rigide", "rigide": "rigide" }[p.type] || "";
   // Nom complet sous le menu (il est souvent tronque sur telephone)
-  $("productInfo").textContent = `${p.name} · ${typeLabel}${p.lambda ? ` · λ ${fmt(p.lambda, 3)}` : ""} · ${on.length ? on.join(", ") + " mm" : "aucune épaisseur active"}`;
+  $("productInfo").textContent = `${p.name} · ${typeLabel}${p.density ? ` (${p.density} kg/m³)` : ""}${p.lambda ? ` · λ ${fmt(p.lambda, 3)}` : ""} · ${on.length ? on.join(", ") + " mm" : "aucune épaisseur active"}`;
   const hints = {
     "souple": "Produit souple : il se comprime un peu, une tolérance de quelques mm en moins est souvent acceptable.",
     "semi-rigide": "Produit semi-rigide : il se comprime peu, reste prudent avec la tolérance en moins.",
@@ -1053,12 +1066,34 @@ async function copyZones(all) {
 }
 
 // ===== Catalogue =====
+// Repere de rigidite d'apres la masse volumique (laines minerales).
+// Les mousses (PIR, EPS, XPS) sont rigides meme tres legeres : d'ou la mention.
+function typeFromDensity(d) {
+  if (!d) return null;
+  if (d < 30) return "souple";
+  if (d <= 90) return "semi-rigide";
+  return "rigide";
+}
+
+function renderDensityHint() {
+  const p = currentProduct();
+  const guess = typeFromDensity(p.density);
+  const base = "Repère laines minérales : souple < 30 · semi-rigide 30 à 90 · rigide > 90 kg/m³. Les mousses (PIR, EPS, XPS) sont rigides même à 15–35 kg/m³.";
+  $("densityHint").textContent = guess && guess !== p.type
+    ? `${base} D'après sa masse volumique, ce produit serait plutôt ${guess} (garde ton choix si c'est une mousse ou si la fiche dit autre chose).`
+    : base;
+}
+
 function renderCatalog() {
   const p = currentProduct();
+  $("catalogProductSelect").innerHTML = state.products.map(x =>
+    `<option value="${x.id}" ${x.id === p.id ? "selected" : ""}>${escapeHtml(x.name)}</option>`).join("");
+  $("productDensity").value = p.density ?? "";
+  renderDensityHint();
   $("productType").value = p.type;
   $("productLambda").value = p.lambda ?? "";
   $("productPacksMP").value = p.packsPerMP ?? "";
-  $("productPriceDate").value = p.priceDate || "";
+  $("productPriceDate").value = frDate(p.priceDate);
   $("catalogSub").textContent = `${state.products.length} produit${state.products.length > 1 ? "s" : ""}`;
   const rows = [...p.thicknesses].sort((a, b) => a.t - b.t);
   $("thicknessRows").innerHTML = rows.length ? rows.map(x => `
@@ -1284,7 +1319,17 @@ $("deleteOrderBtn").addEventListener("click", async () => {
 });
 
 // ===== Evenements : catalogue =====
+// Le meme produit est selectionne en haut (calcul) et dans le catalogue
+$("catalogProductSelect").addEventListener("change", e => { state.currentId = e.target.value; refreshAll(); });
 $("productType").addEventListener("change", e => { currentProduct().type = e.target.value; refreshAll(); });
+$("productDensity").addEventListener("input", e => {
+  const p = currentProduct();
+  p.density = Number(e.target.value) || null;
+  // Type deduit automatiquement (modifiable ensuite si c'est une mousse, etc.)
+  const guess = typeFromDensity(p.density);
+  if (guess) { p.type = guess; $("productType").value = guess; }
+  renderProductPicker(); renderDensityHint(); saveState();
+});
 $("productLambda").addEventListener("input", e => {
   currentProduct().lambda = Number(e.target.value) || null;
   renderProductPicker(); renderResults(); saveState();
@@ -1293,8 +1338,16 @@ $("productPacksMP").addEventListener("input", e => {
   currentProduct().packsPerMP = Number(e.target.value) || null;
   renderOrder(); saveState();
 });
-$("productPriceDate").addEventListener("input", e => {
-  currentProduct().priceDate = e.target.value || null;
+// Date saisie en jj.mm.aaaa (ou jj/mm/aaaa), stockee en aaaa-mm-jj
+$("productPriceDate").addEventListener("change", e => {
+  const v = e.target.value.trim();
+  const m = v.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
+  if (!v) currentProduct().priceDate = null;
+  else if (m) {
+    const y = m[3].length === 2 ? "20" + m[3] : m[3];
+    currentProduct().priceDate = `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  } else { toast("Date au format jj.mm.aaaa"); }
+  e.target.value = frDate(currentProduct().priceDate);
   renderOrder(); saveState();
 });
 
@@ -1341,6 +1394,7 @@ $("newProductBtn").addEventListener("click", async () => {
     text: "Astuce : pour reprendre une fiche technique, utilise plutôt « Importer un tableau ».",
     fields: [
       { id: "name", label: "Nom du produit", placeholder: "ex. Flumroc Dämmplatte 3" },
+      { id: "density", label: "Masse volumique (kg/m³), facultatif", placeholder: "ex. 40", inputmode: "numeric" },
       { id: "list", label: "Épaisseurs disponibles (mm, séparées par des virgules)", value: "40, 60, 80, 100, 120" }
     ],
     buttons: [{ label: "Annuler", value: "cancel", ghost: true }, { label: "Créer", value: "ok", primary: true }],
@@ -1350,7 +1404,8 @@ $("newProductBtn").addEventListener("click", async () => {
   const list = r.values.list.split(/[,;\s]+/).map(Number).filter(n => n > 0).map(Math.round);
   const id = "p" + Date.now();
   state.products.push({
-    id, name: r.values.name.trim(), type: "semi-rigide", lambda: null, packsPerMP: null, priceDate: null,
+    id, name: r.values.name.trim(), density: Number(r.values.density.replace(",", ".")) || null,
+    type: typeFromDensity(Number(r.values.density.replace(",", "."))) || "semi-rigide", lambda: null, packsPerMP: null, priceDate: null,
     thicknesses: [...new Set(list)].map(t => ({ t, on: true, m2Pack: null, price: null }))
   });
   state.currentId = id;
@@ -1700,7 +1755,7 @@ function loadImportText() {
 }
 
 function resetImport() {
-  $("importText").value = ""; $("importName").value = ""; $("importLambda").value = "";
+  $("importText").value = ""; $("importName").value = ""; $("importLambda").value = ""; $("importDensity").value = "";
   importGrid = []; importRoles = [];
   renderImport();
 }
@@ -1721,6 +1776,10 @@ $("importPreview").addEventListener("change", e => {
   renderImport();
 });
 $("importDest").addEventListener("change", renderImport);
+$("importDensity").addEventListener("input", e => {
+  const guess = typeFromDensity(Number(e.target.value));
+  if (guess) $("importType").value = guess;
+});
 $("transposeBtn").addEventListener("click", () => {
   // Certaines fiches mettent les epaisseurs en colonnes : on fait pivoter le tableau
   if (!importGrid.length) return;
@@ -1739,7 +1798,8 @@ $("doImportBtn").addEventListener("click", () => {
     const name = $("importName").value.trim();
     if (!name) { $("importName").focus(); toast("Donne un nom au produit"); return; }
     p = { id: "p" + Date.now(), name, type: $("importType").value,
-          lambda: Number($("importLambda").value) || null, packsPerMP: null, thicknesses: [] };
+          lambda: Number($("importLambda").value) || null, density: Number($("importDensity").value) || null,
+          packsPerMP: null, thicknesses: [] };
     state.products.push(p);
   } else {
     p = state.products.find(x => x.id === destId);
