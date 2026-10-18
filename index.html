@@ -206,8 +206,11 @@
       <label>Surface à isoler (m²)
         <input id="surface" type="number" min="0" step="0.1" placeholder="ex. 42,5" inputmode="decimal">
       </label>
-      <label>Repère (facultatif)
-        <input id="repere" type="text" placeholder="ex. Façade nord">
+      <label>Façade (facultatif)
+        <input id="facade" type="text" placeholder="ex. Nord">
+      </label>
+      <label>Étage (facultatif)
+        <input id="etage" type="text" placeholder="ex. 2e">
       </label>
     </div>
     <div id="results" class="results"></div>
@@ -218,12 +221,20 @@
     <h2>Commande</h2>
     <div id="orderLines"></div>
     <div id="orderSummary"></div>
-    <div class="row" id="orderActions">
-      <label style="max-width:140px">Chute (%)
+    <div id="orderActions">
+      <label style="max-width:140px; margin-top:12px">Chute (%)
         <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric">
       </label>
-      <button class="btn primary" id="copyOrderBtn">Copier la commande</button>
-      <button class="btn ghost" id="clearOrderBtn">Vider</button>
+      <div class="row">
+        <button class="btn primary" id="copyExcelBtn">Copier pour Excel</button>
+        <button class="btn" id="copyRecapBtn">Copier le récap</button>
+      </div>
+      <p class="hint" id="excelHint"></p>
+      <div class="row">
+        <button class="btn small ghost" id="copyAllBtn">Tout recopier</button>
+        <button class="btn small ghost" id="copyOrderBtn">Texte pour mail</button>
+        <button class="btn small ghost" id="clearOrderBtn">Vider</button>
+      </div>
     </div>
   </section>
 
@@ -265,7 +276,7 @@
   </details>
 </main>
 
-<footer>Strate · V2</footer>
+<footer>Strate · V3</footer>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -324,6 +335,8 @@ function loadState() {
 // on complete a partir du catalogue par defaut quand le produit correspond
 function migrate(s) {
   s.order = Array.isArray(s.order) ? s.order : [];
+  // V2 : un seul champ "repere" -> devient la facade en V3
+  s.order.forEach(l => { if (l.repere && !l.facade) { l.facade = l.repere; delete l.repere; } });
   s.inputs = s.inputs || {};
   s.products.forEach(p => {
     const def = DEFAULT_PRODUCTS.find(d => d.id === p.id);
@@ -344,7 +357,8 @@ function saveState() {
   state.inputs = {
     target: $("target").value, maxLayers: $("maxLayers").value,
     tolMinus: $("tolMinus").value, tolPlus: $("tolPlus").value,
-    surface: $("surface").value, waste: $("waste").value, mode
+    surface: $("surface").value, waste: $("waste").value,
+    facade: $("facade").value, etage: $("etage").value, mode
   };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
 }
@@ -514,7 +528,7 @@ function nearestHtml(combos, target) {
 }
 
 // ===== Commande =====
-// Une ligne = une zone (repere + surface) isolee avec une combinaison.
+// Une ligne = une zone (facade, etage, surface) isolee avec une combinaison.
 // Le recap additionne les m2 par produit et par epaisseur sur toutes les lignes.
 function addToOrder(layers) {
   const surface = Number(String($("surface").value).replace(",", "."));
@@ -528,11 +542,13 @@ function addToOrder(layers) {
     id: "l" + Date.now(),
     productId: p.id,
     productName: p.name,
-    repere: $("repere").value.trim(),
+    facade: $("facade").value.trim(),
+    etage: $("etage").value.trim(),
     layers,
-    surface
+    surface,
+    copied: false
   });
-  $("repere").value = "";
+  // On garde facade et etage remplis : les zones suivantes partagent souvent l'un des deux
   renderOrder();
   saveState();
   toast("Ajouté à la commande");
@@ -584,8 +600,8 @@ function renderOrder() {
   $("orderLines").innerHTML = lines.map(l => `
     <div class="order-line">
       <div>
-        <b>${l.repere ? escapeHtml(l.repere) : "Zone"}</b> · ${fmt0(l.surface)} m²<br>
-        <span class="meta">${comboLabel(l.layers)} mm${state.products.length > 1 ? " · " + escapeHtml(l.productName) : ""}</span>
+        <b>${escapeHtml(zoneLabel(l))}</b> · ${fmt0(l.surface)} m²<br>
+        <span class="meta">${comboLabel(l.layers)} mm${state.products.length > 1 ? " · " + escapeHtml(l.productName) : ""}${l.copied ? " · copié dans Excel" : ""}</span>
       </div>
       <button class="btn small ghost" data-remove="${l.id}" aria-label="Retirer">✕</button>
     </div>`).join("");
@@ -611,6 +627,7 @@ function renderOrder() {
       </table>
     </div>
     ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}`;
+  renderExcelHint();
 }
 
 function orderText() {
@@ -628,9 +645,145 @@ function orderText() {
     txt += "\n";
   });
   txt += "Détail par zone :\n";
-  state.order.forEach(l => { txt += `- ${l.repere || "Zone"} : ${fmt0(l.surface)} m², ${comboLabel(l.layers)} mm\n`; });
+  state.order.forEach(l => { txt += `- ${zoneLabel(l)} : ${fmt0(l.surface)} m², ${comboLabel(l.layers)} mm\n`; });
   txt += `\n(Quantités avec ${waste} % de chute)`;
   return txt;
+}
+
+function zoneLabel(l) {
+  const parts = [];
+  if (l.facade) parts.push(`Façade ${l.facade}`);
+  if (l.etage) parts.push(`Étage ${l.etage}`);
+  return parts.length ? parts.join(" · ") : "Zone";
+}
+
+// ===== Copie vers Excel =====
+// On met dans le presse-papier deux versions du meme tableau :
+// - du HTML (Excel le colle avec la mise en forme : gras, couleurs, bordures)
+// - du texte separe par des tabulations (repli pour Excel mobile, Bloc-notes...)
+// x:num donne a Excel la vraie valeur numerique, quel que soit le separateur decimal
+// du PC (virgule en France, point sur certains PC suisses).
+const XL = {
+  th: "background:#C2410C;color:#FFFFFF;font-weight:bold;border:.5pt solid #7F7F7F;padding:3px 6px;",
+  td: "border:.5pt solid #BFBFBF;padding:3px 6px;",
+  tot: "font-weight:bold;background:#FBE7DC;border:.5pt solid #7F7F7F;padding:3px 6px;"
+};
+
+function xlCell(v, opts = {}) {
+  const style = (opts.style || XL.td) + (opts.fmt ? `mso-number-format:'${opts.fmt}';` : "");
+  if (typeof v === "number" && isFinite(v)) {
+    const d = opts.dec ?? 0;
+    return `<td style="${style}text-align:right;" x:num="${v}">${xlNum(v, d)}</td>`;
+  }
+  return `<td style="${style}">${escapeHtml(v ?? "")}</td>`;
+}
+
+function xlTable(header, rows, footer) {
+  const head = header ? `<tr>${header.map(h => `<td style="${XL.th}">${escapeHtml(h)}</td>`).join("")}</tr>` : "";
+  return `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>`
+    + `<table style="border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;">${head}${rows.join("")}${footer || ""}</table></body></html>`;
+}
+
+// Nombre sans separateur de milliers (l'espace fine empecherait Excel de reconnaitre un nombre)
+function xlNum(v, d = 2) {
+  return Number(v).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false });
+}
+
+function tsv(header, rows) {
+  const lines = header ? [header.join("\t")] : [];
+  rows.forEach(r => lines.push(r.map(v => typeof v === "number" ? xlNum(v, Number.isInteger(v) ? 0 : 2) : (v ?? "")).join("\t")));
+  return lines.join("\n");
+}
+
+const ZONE_HEADER = ["Façade", "Étage", "Produit", "Composition", "Ép. totale (mm)", "Couche 1 (mm)", "Couche 2 (mm)", "Couche 3 (mm)", "Surface (m²)"];
+
+function zoneValues(l) {
+  // Couches de la plus epaisse a la plus fine, colonnes fixes pour pouvoir filtrer / sommer
+  const layers = [...l.layers].sort((a, b) => b - a);
+  return [l.facade || "", l.etage || "", l.productName, comboLabel(l.layers),
+    l.layers.reduce((a, b) => a + b, 0), layers[0] ?? "", layers[1] ?? "", layers[2] ?? "", l.surface];
+}
+
+function zonesClipboard(lines, withHeader) {
+  const values = lines.map(zoneValues);
+  const rows = values.map(v => `<tr>${v.map((x, i) => xlCell(x, i === 8 ? { dec: 2, fmt: "0\\.00" } : {})).join("")}</tr>`);
+  return { html: xlTable(withHeader ? ZONE_HEADER : null, rows), text: tsv(withHeader ? ZONE_HEADER : null, values) };
+}
+
+function recapClipboard() {
+  const header = ["Produit", "Épaisseur (mm)", "m² nets", "m² + chute", "Paquets", "Multipacs", "m² commandés", "CHF/m² HT", "CHF HT"];
+  const data = orderTotals();
+  const values = data.map(r => {
+    const product = state.products.find(p => p.id === r.productId);
+    const item = product && product.thicknesses.find(x => x.t === r.t);
+    return [r.productName, r.t, r.m2, r.m2Waste, r.packs ?? "", mpText(r.packs || 0, r.perMP),
+      r.m2Ordered ?? "", item && item.price ? item.price : "", r.price ?? ""];
+  });
+  const decs = [0, 0, 2, 2, 0, 0, 2, 2, 2];
+  const rows = values.map(v => `<tr>${v.map((x, i) => xlCell(x, { dec: decs[i], fmt: decs[i] ? "0\\.00" : undefined })).join("")}</tr>`);
+  const total = data.reduce((s, r) => s + (r.price || 0), 0);
+  const waste = Number($("waste").value) || 0;
+  const footer = total
+    ? `<tr><td colspan="8" style="${XL.tot}">Total estimé (prix catalogue, ${waste} % de chute)</td>${xlCell(total, { style: XL.tot, dec: 2, fmt: "#,##0\\.00" })}</tr>`
+    : "";
+  const text = tsv(header, values) + (total ? `\nTotal estimé\t\t\t\t\t\t\t\t${xlNum(total)}` : "");
+  return { html: xlTable(header, rows, footer), text };
+}
+
+async function copyRich({ html, text }) {
+  // 1) Evenement "copy" : le HTML arrive tel quel dans Excel (Chrome, Edge, Firefox).
+  //    C'est la methode a privilegier : la methode moderne "nettoie" le HTML et
+  //    supprime les infos reservees a Excel (x:num, formats de nombre).
+  try {
+    let done = false;
+    const onCopy = e => {
+      e.clipboardData.setData("text/html", html);
+      e.clipboardData.setData("text/plain", text);
+      e.preventDefault();
+      done = true;
+    };
+    document.addEventListener("copy", onCopy);
+    const ok = document.execCommand("copy");
+    document.removeEventListener("copy", onCopy);
+    if (ok && done) return true;
+  } catch (e) {}
+  // 2) Repli : methode moderne (Safari...), mise en forme un peu simplifiee
+  try {
+    if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" })
+      })]);
+      return true;
+    }
+  } catch (e) {}
+  // 3) Dernier recours : texte brut
+  try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+  return false;
+}
+
+function renderExcelHint() {
+  const fresh = state.order.filter(l => !l.copied).length;
+  const started = state.order.some(l => l.copied);
+  $("copyExcelBtn").textContent = fresh && started ? `Copier pour Excel (${fresh} nouvelle${fresh > 1 ? "s" : ""})` : "Copier pour Excel";
+  $("copyExcelBtn").disabled = !fresh;
+  $("excelHint").textContent = !started
+    ? "1er collage : en-tête + zones. Ensuite, seules les nouvelles zones sont copiées : colle-les sous ta dernière ligne."
+    : fresh
+      ? "Colle sous la dernière ligne de ton tableau Excel."
+      : "Tout est déjà dans ton Excel. Ajoute une zone pour continuer.";
+}
+
+async function copyZones(all) {
+  const lines = all ? state.order : state.order.filter(l => !l.copied);
+  if (!lines.length) return;
+  // En-tete seulement au premier collage (ou quand on recopie tout)
+  const withHeader = all || !state.order.some(l => l.copied);
+  const ok = await copyRich(zonesClipboard(lines, withHeader));
+  if (!ok) { toast("Copie impossible sur ce navigateur"); return; }
+  lines.forEach(l => l.copied = true);
+  renderOrder(); saveState();
+  toast(`${lines.length} zone${lines.length > 1 ? "s" : ""} copiée${lines.length > 1 ? "s" : ""}${withHeader ? " avec l'en-tête" : ""}`);
 }
 
 // ===== Catalogue =====
@@ -703,6 +856,13 @@ $("clearOrderBtn").addEventListener("click", () => {
   state.order = [];
   renderOrder(); saveState();
 });
+$("copyExcelBtn").addEventListener("click", () => copyZones(false));
+$("copyAllBtn").addEventListener("click", () => copyZones(true));
+$("copyRecapBtn").addEventListener("click", async () => {
+  const ok = await copyRich(recapClipboard());
+  toast(ok ? "Récap copié, colle-le dans Excel" : "Copie impossible sur ce navigateur");
+});
+["facade", "etage"].forEach(id => $(id).addEventListener("input", saveState));
 $("copyOrderBtn").addEventListener("click", async () => {
   const txt = orderText();
   try {
@@ -803,6 +963,8 @@ if (inp.maxLayers) $("maxLayers").value = inp.maxLayers;
 if (inp.tolMinus !== undefined && inp.tolMinus !== "") $("tolMinus").value = inp.tolMinus;
 if (inp.tolPlus !== undefined && inp.tolPlus !== "") $("tolPlus").value = inp.tolPlus;
 if (inp.surface) $("surface").value = inp.surface;
+if (inp.facade) $("facade").value = inp.facade;
+if (inp.etage) $("etage").value = inp.etage;
 if (inp.waste !== undefined && inp.waste !== "") $("waste").value = inp.waste;
 renderProductPicker();
 renderCatalog();

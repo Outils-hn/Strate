@@ -8,6 +8,7 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **Combinaisons** : épaisseur cible, tolérance − / +, 1 à 3 couches max ; résultats classés (moins de couches, plus petit écart, couches équilibrées), avec schéma des couches et valeur R.
 - **Épaisseur la plus proche** : la combinaison réalisable juste en dessous et juste au-dessus de l'épaisseur dessinée.
 - **Commande** (V2) : surface + repère par zone, bouton « + Commande » sur chaque combinaison, récap par épaisseur (m² avec chute, paquets arrondis au supérieur, multipacs, prix catalogue CHF HT) et copie en texte pour un mail.
+- **Copie vers Excel** (V3) : zones (façade, étage) copiées avec mise en forme ; en-tête au 1er collage, puis seulement les nouvelles zones. Récap de commande copiable aussi.
 - Le catalogue (m²/paquet et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
 ## Utilisation
