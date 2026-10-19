@@ -1169,17 +1169,128 @@ function buildPrintView() {
     <p class="pv-foot">Quantités arrondies au paquet supérieur, chute de ${waste} % incluse.${total ? " " + escapeHtml(priceDateNote(rows).replace(/^./, c => c.toUpperCase())) + ", prix indicatifs." : ""}${fixNotes ? " Fixations : " + escapeHtml(fixNotes) + ", arrondies à la boîte supérieure." : ""} Établi avec Strate le ${today}.</p>`;
 }
 
+// ===== Bon de commande PDF (telechargement direct) =====
+// jsPDF est livre avec l'appli (dossier vendor/) : pas besoin d'Internet au boulot.
+// On le charge seulement au premier clic pour garder l'appli legere.
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) return resolve();
+    const el = document.createElement("script");
+    el.src = src; el.onload = resolve; el.onerror = () => reject(new Error(src));
+    document.head.appendChild(el);
+  });
+}
+async function loadPdfLibs() {
+  if (!window.jspdf) await loadScript("vendor/jspdf.umd.min.js");
+  if (!window.jspdf.jsPDF.API.autoTable) await loadScript("vendor/jspdf.plugin.autotable.min.js");
+}
+
+// Les polices standard du PDF ne connaissent que l'alphabet occidental (Windows-1252) :
+// on remplace les rares caracteres speciaux, dont l'espace fine des milliers (1 516,50).
+const PDF_OK = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
+function pdfText(s) {
+  return String(s ?? "")
+    .replace(/[   ]/g, " ").replace(/⚠/g, "!").replace(/✓/g, "OK").replace(/→/g, "->").replace(/λ/g, "lambda")
+    .replace(/[^\x00-\xff]/g, ch => PDF_OK.includes(ch) ? ch : "?");
+}
+
+function pdfFileName() {
+  const pl = plan();
+  const name = `Commande isolation - ${curOrder().name}${pl.active && !pl.nothingLeft ? " - livraison " + pl.number : ""} - ${todayIso()}`;
+  return name.replace(/[\\/:*?"<>|]+/g, "-") + ".pdf";
+}
+
+async function exportPdf() {
+  buildPrintView();
+  const view = $("printView");
+  try {
+    await loadPdfLibs();
+  } catch (e) {
+    // Repli : si jsPDF ne charge pas, on passe par l'impression du navigateur
+    toast("PDF direct indisponible : passage par l'impression");
+    window.print();
+    return;
+  }
+  // La vue doit etre rendue (hors ecran) pour que les retours a la ligne des cellules soient lus
+  view.style.cssText = "display:block; position:absolute; left:-10000px; top:0; width:186mm; font: 10pt Barlow, Arial, sans-serif;";
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const M = 12, W = 210 - 2 * M, BOTTOM = 297 - 16;
+  const INK = [29, 34, 38], GREY = [100, 108, 113], WOOL = [245, 229, 184];
+  let y = 16;
+  const ensure = h => { if (y + h > BOTTOM) { doc.addPage(); y = 16; } };
+  const write = (text, size, opts = {}) => {
+    doc.setFont("helvetica", opts.bold ? "bold" : "normal");
+    doc.setFontSize(size);
+    doc.setTextColor(...(opts.color || INK));
+    const lines = doc.splitTextToSize(pdfText(text), W);
+    const lh = size * 0.42;
+    ensure(lines.length * lh + 1);
+    doc.text(lines, M, y + lh * 0.8);
+    y += lines.length * lh + (opts.after ?? 2);
+  };
+
+  const walk = node => [...node.children].forEach(el => {
+    const tag = el.tagName, cls = el.classList;
+    if (tag === "H1") write(el.textContent, 18, { bold: true, after: 1 });
+    else if (tag === "H2") {
+      ensure(18);
+      y += 3;
+      write(el.textContent, 12.5, { bold: true, after: 1 });
+      doc.setDrawColor(...INK); doc.setLineWidth(0.5); doc.line(M, y, M + W, y);
+      y += 3;
+    }
+    else if (tag === "H3") { ensure(14); y += 1; write(el.textContent, 11, { bold: true, after: 1.5 }); }
+    else if (cls.contains("pv-sub")) write(el.textContent, 11, { color: GREY, after: 3 });
+    else if (cls.contains("pv-meta")) write([...el.children].map(c => c.textContent.trim()).join("     "), 9.5, { after: 3 });
+    else if (cls.contains("pv-facade")) walk(el);
+    else if (tag === "TABLE") {
+      doc.autoTable({
+        html: el, startY: y, margin: { left: M, right: M, bottom: 16 }, theme: "plain",
+        styles: { font: "helvetica", fontSize: 9, textColor: [17, 17, 17], cellPadding: { top: 1.6, bottom: 1.6, left: 1.8, right: 1.8 },
+                  lineColor: [205, 205, 205], lineWidth: { bottom: 0.2 }, overflow: "linebreak" },
+        headStyles: { fillColor: INK, textColor: 255, fontStyle: "bold", lineWidth: 0 },
+        didParseCell: data => {
+          data.cell.text = data.cell.text.map(pdfText);
+          // AutoTable garde l'element HTML d'origine dans "_element"
+          const cell = data.cell.raw && (data.cell.raw._element || data.cell.raw);
+          const row = data.row.raw && (data.row.raw._element || data.row.raw);
+          if (cell && cell.classList && cell.classList.contains("num")) data.cell.styles.halign = "right";
+          if (row && row.classList && row.classList.contains("pv-total")) {
+            data.cell.styles.fillColor = WOOL; data.cell.styles.fontStyle = "bold"; data.cell.styles.lineWidth = 0;
+          }
+        }
+      });
+      y = doc.lastAutoTable.finalY + 3;
+    }
+    else if (tag === "P" || tag === "DIV") {
+      const bold = el.style.fontWeight === "700" || !!el.querySelector("b");
+      const foot = cls.contains("pv-foot");
+      if (foot) { ensure(14); y += 4; doc.setDrawColor(200); doc.setLineWidth(0.2); doc.line(M, y, M + W, y); y += 2; }
+      write(el.textContent.replace(/\s+/g, " ").trim(), foot ? 8 : 9, { bold: bold && !foot, color: foot ? GREY : INK, after: 2.5 });
+    }
+  });
+
+  try {
+    walk(view);
+    // Pied de page : signature et numero de page
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++) {
+      doc.setPage(i);
+      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GREY);
+      doc.text(pdfText("Strate · Hugo N."), M, 297 - 8);
+      doc.text(`Page ${i} / ${n}`, 210 - M, 297 - 8, { align: "right" });
+    }
+    doc.save(pdfFileName());
+    toast("PDF téléchargé");
+  } finally {
+    view.style.cssText = "";
+  }
+}
+
 $("pdfBtn").addEventListener("click", () => {
   if (!curOrder().lines.length) return;
-  buildPrintView();
-  // Le titre de la page devient le nom propose pour le fichier PDF
-  const oldTitle = document.title;
-  const pl = plan();
-  document.title = `Commande isolation - ${curOrder().name}${pl.active && !pl.nothingLeft ? " - livraison " + pl.number : ""} - ${todayIso()}`;
-  const restore = () => { document.title = oldTitle; window.removeEventListener("afterprint", restore); };
-  window.addEventListener("afterprint", restore);
-  window.print();
-  setTimeout(restore, 1000);
+  exportPdf();
 });
 
 // ===== Catalogue des fixations =====
