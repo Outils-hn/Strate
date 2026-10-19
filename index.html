@@ -9,7 +9,10 @@
   try { const t = localStorage.getItem("strate.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
 <meta name="description" content="Combinaisons d'epaisseurs d'isolation et commande">
-<link rel="stylesheet" href="styles.css?v=11">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css?v=12">
 </head>
 <body>
 <header>
@@ -248,7 +251,8 @@
     </div>
     <div id="orderLines"></div>
     <!-- Reglages de la commande : chute + fixations (avant le recap qu'ils calculent) -->
-    <div id="orderSettings" class="fix-box">
+    <details id="orderSettings" class="fold">
+      <summary>Réglages <span class="meta" id="settingsSummary"></span></summary>
       <div class="settings-head">
         <label class="inline-field">Chute
           <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric"> %
@@ -277,7 +281,7 @@
           <select id="spiralSystem" class="fix-sys" aria-label="Système de spirales"></select>
         </div>
       </div>
-    </div>
+    </details>
     <div id="orderSummary"></div>
     <div id="orderActions">
       <div class="row">
@@ -296,7 +300,7 @@
   </div>
 </main>
 
-<footer>Strate · V11</footer>
+<footer>Strate · V12</footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -312,7 +316,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=11"></script>
-<script src="js/app.js?v=11"></script>
+<script src="js/core.js?v=12"></script>
+<script src="js/app.js?v=12"></script>
 </body>
 </html>
