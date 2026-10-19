@@ -277,7 +277,7 @@ function renderFixSettings() {
   const opts = (kind, cur) => state.fixSystems.filter(x => x.kind === kind)
     .map(x => `<option value="${x.id}" ${x.id === cur ? "selected" : ""}>${escapeHtml(x.name)}</option>`).join("");
   $("anchorSystem").innerHTML = opts("cheville", f.anchorSystem) || `<option value="">Aucun (voir catalogue Fixations)</option>`;
-  $("spiralSystem").innerHTML = `<option value="auto" ${f.spiralSystem === "auto" ? "selected" : ""}>Auto (selon la rigidité de la 1re couche)</option>` + opts("spirale", f.spiralSystem);
+  $("spiralSystem").innerHTML = `<option value="auto" ${f.spiralSystem === "auto" ? "selected" : ""}>Auto (selon la 1re couche)</option>` + opts("spirale", f.spiralSystem);
 }
 
 function fixSummaryHtml() {
@@ -323,6 +323,7 @@ function renderOrder() {
   renderOrderPicker();
   const lines = curOrder().lines;
   $("orderActions").classList.toggle("hidden", !lines.length);
+  $("orderSettings").classList.toggle("hidden", !lines.length);
   if (!lines.length) {
     $("orderLines").innerHTML = `<p class="empty">Saisis une surface, puis touche « + Commande » sur une combinaison.</p>`;
     $("orderSummary").innerHTML = "";
