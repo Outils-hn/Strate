@@ -18,6 +18,7 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **V11** : livraisons en plusieurs fois (X % du total, solde proposé automatiquement, historique, exports de la livraison en cours), guide de démarrage et aides « ? ».
 - **V12** : nouveau visuel « dessin technique » (gris béton, graphite, jaune laine de verre réservé aux couches dessinées avec le symbole d'isolant des plans), recommandée en grand + autres combinaisons en lignes, total de la commande en tête, réglages et fixations repliables.
 - **V12.1** : bon de commande PDF téléchargé directement (jsPDF, livré dans `vendor/`, sans connexion Internet), signature Hugo N.
+- **V13** : style de la famille Masse (barre de navigation, cartes blanches, titres en petites capitales, accent brique, chiffres en chasse fixe et milliers à la suisse, tuiles de résultats), page qui ne déborde plus sur téléphone.
 - Le catalogue (m²/paquet et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
 ## Organisation du code

@@ -102,9 +102,11 @@
   }
 
   // Format francais : 7,10 au lieu de 7.10
-  const fmt = (v, d = 2) => Number(v).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
+  // Separateur de milliers a la suisse (apostrophe), virgule decimale : 2'700,50
+  const swiss = s => s.replace(/[\u202f\u00a0 ]/g, "'");
+  const fmt = (v, d = 2) => swiss(Number(v).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }));
 
-  const fmt0 = v => Number(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
+  const fmt0 = v => swiss(Number(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 }));
 
   function newOrder(name) {
     return { id: "o" + Date.now() + Math.floor(Math.random() * 1000), name, lines: [], waste: 5, fix: defaultFix(),
