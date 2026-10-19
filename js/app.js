@@ -657,9 +657,9 @@ function renderCatalog() {
   $("productDensity").value = p.density ?? "";
   renderDensityHint();
   $("productType").value = p.type;
-  $("productLambda").value = p.lambda ?? "";
+  $("productLambda").value = decOut(p.lambda);
   $("productPacksMP").value = p.packsPerMP ?? "";
-  $("productPlateArea").value = p.plateArea ?? "";
+  $("productPlateArea").value = decOut(p.plateArea);
   $("productPriceDate").value = frDate(p.priceDate);
   $("catalogSub").textContent = `${state.products.length} produit${state.products.length > 1 ? "s" : ""}`;
   const rows = [...p.thicknesses].sort((a, b) => a.t - b.t);
@@ -667,11 +667,23 @@ function renderCatalog() {
     <tr class="${x.on ? "" : "off"}" data-t="${x.t}">
       <td><input type="checkbox" data-field="on" ${x.on ? "checked" : ""} aria-label="Disponible"></td>
       <td class="num">${x.t}</td>
-      <td class="num"><input type="number" step="0.01" min="0" data-field="m2Pack" value="${x.m2Pack ?? ""}" inputmode="decimal"></td>
-      <td class="num"><input type="number" step="0.05" min="0" data-field="price" value="${x.price ?? ""}" inputmode="decimal"></td>
+      <td class="num"><input type="text" data-field="m2Pack" value="${decOut(x.m2Pack)}" inputmode="decimal" autocomplete="off"></td>
+      <td class="num"><input type="text" data-field="price" value="${decOut(x.price, 2)}" inputmode="decimal" autocomplete="off"></td>
       <td><button class="btn small ghost" data-del="${x.t}" aria-label="Supprimer">✕</button></td>
     </tr>`).join("")
     : `<tr><td colspan="5" class="empty">Aucune épaisseur — ajoutes-en une.</td></tr>`;
+}
+
+// Champs decimaux du catalogue : affiches avec une virgule (7,5), lus aussi avec un point
+function decOut(v, d) {
+  if (v == null || v === "") return "";
+  return (d != null ? Number(v).toFixed(d) : String(v)).replace(".", ",");
+}
+function decIn(str) {
+  const v = String(str).trim();
+  if (!v) return null;
+  const n = parseNum(v.replace(/'/g, ""));
+  return isNaN(n) ? undefined : n;   // undefined = saisie en cours (ex. "7,"), on ne touche a rien
 }
 
 function escapeHtml(s) {
@@ -949,7 +961,9 @@ $("productDensity").addEventListener("input", e => {
   renderProductPicker(); renderDensityHint(); saveState();
 });
 $("productLambda").addEventListener("input", e => {
-  currentProduct().lambda = Number(e.target.value) || null;
+  const v = decIn(e.target.value);
+  if (v === undefined) return;
+  currentProduct().lambda = v || null;
   renderProductPicker(); renderResults(); saveState();
 });
 $("productPacksMP").addEventListener("input", e => {
@@ -957,7 +971,9 @@ $("productPacksMP").addEventListener("input", e => {
   renderOrder(); saveState();
 });
 $("productPlateArea").addEventListener("input", e => {
-  currentProduct().plateArea = Number(e.target.value) || null;
+  const v = decIn(e.target.value);
+  if (v === undefined) return;
+  currentProduct().plateArea = v || null;
   renderOrder(); saveState();
 });
 // Date saisie en jj.mm.aaaa (ou jj/mm/aaaa), stockee en aaaa-mm-jj
@@ -984,14 +1000,17 @@ $("thicknessRows").addEventListener("input", e => {
     tr.classList.toggle("off", !item.on);
     renderProductPicker(); renderResults();
   } else {
-    item[field] = e.target.value === "" ? null : Number(e.target.value);
+    const v = decIn(e.target.value);
+    if (v === undefined) return;
+    item[field] = v;
     // Un prix modifie a la main = prix releve aujourd'hui
-    if (field === "price") { currentProduct().priceDate = todayIso(); $("productPriceDate").value = todayIso(); }
+    if (field === "price") { currentProduct().priceDate = todayIso(); $("productPriceDate").value = frDate(todayIso()); }
     renderResults(); renderOrder();
   }
   saveState();
 });
 
+$("thicknessRows").addEventListener("change", e => { if (e.target.dataset.field && e.target.dataset.field !== "on") renderCatalog(); });
 $("thicknessRows").addEventListener("click", e => {
   const btn = e.target.closest("[data-del]");
   if (!btn) return;
@@ -1333,7 +1352,7 @@ function renderFixCatalog() {
     <td><input data-f="name" value="${escapeHtml(a.name)}"></td>
     <td><input data-f="art" value="${escapeHtml(a.art || "")}"></td>
     ${isAnchor ? `<td class="num"><input data-f="max" type="number" min="0" value="${a.max ?? ""}" inputmode="numeric"></td>` : ""}
-    <td class="num"><input data-f="price100" type="number" min="0" step="0.05" value="${a.price100 ?? ""}" inputmode="decimal"></td>
+    <td class="num"><input data-f="price100" type="text" value="${decOut(a.price100, 2)}" inputmode="decimal" autocomplete="off"></td>
     <td class="num"><input data-f="pack" type="number" min="0" step="1" value="${a.pack ?? ""}" inputmode="numeric"></td>
     <td><button class="btn small ghost" data-delart="${i}" aria-label="Supprimer">✕</button></td></tr>`).join("")
     || `<tr><td colspan="6" class="empty">Aucun article.</td></tr>`;
@@ -1371,6 +1390,7 @@ $("fixArticles").addEventListener("input", e => {
     (sys.rules || []).forEach(r => { if (r.article === old) r.article = v; });
     a.id = v; a.name = v;
   } else if (f === "art") a.art = e.target.value.trim();
+  else if (f === "price100") { const v = decIn(e.target.value); if (v === undefined) return; a[f] = v; }
   else a[f] = e.target.value === "" ? null : Number(e.target.value);
   afterFixEdit();
 });
