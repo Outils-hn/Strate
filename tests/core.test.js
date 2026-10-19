@@ -21,7 +21,7 @@ test("combinaisons : pas de doublon, 1 a N couches", () => {
 test("combinaisons : total et prix au m2", () => {
   const combo = c.allCombos(ISO_T, 2, ISO).find(x => x.layers.join() === "120,100");
   assert.equal(combo.total, 220);
-  assert.equal(combo.price, 33.7 + 28.2);
+  assert.equal(combo.price, 48.65 + 40.6);
 });
 
 test("prix : null si une couche n'a pas de prix", () => {
@@ -60,21 +60,22 @@ test("surface : nombre simple ou calcul", () => {
   assert.ok(Number.isNaN(c.evalSurface("alert(1)")));
 });
 
-test("commande : m2 avec chute, paquets arrondis au superieur, prix", () => {
+test("commande : m2 avec chute, colis arrondis au superieur, prix", () => {
   const order = { waste: 5, lines: [
     { productId: ISO.id, productName: ISO.name, layers: [120, 100], surface: 42.5 }
   ] };
   const rows = c.computeTotals(order, [ISO]);
   const r120 = rows.find(r => r.t === 120), r100 = rows.find(r => r.t === 100);
   assert.equal(r120.m2, 42.5);
-  assert.equal(r120.packs, 20);          // 44,625 m2 / 2,25 = 19,8 -> 20
-  assert.equal(r100.packs, 15);          // 44,625 / 3,00 = 14,9 -> 15
+  assert.equal(r120.packs, 15);          // 44,625 m2 / 3,00 = 14,9 -> 15 colis
+  assert.equal(r100.packs, 12);          // 44,625 / 3,75 = 11,9 -> 12
+  assert.equal(r120.perMP, 12);
   assert.equal(r120.m2Ordered, 45);
-  assert.equal(Math.round(r120.price * 100) / 100, 1516.5);
+  assert.equal(Math.round(r120.price * 100) / 100, 2189.25);
 });
 
-test("commande : un compte rond ne rajoute pas de paquet", () => {
-  // 20 m2 + 5 % = 21 m2 = exactement 14 paquets de 1,5 m2
+test("commande : un compte rond ne rajoute pas de colis", () => {
+  // 20 m2 + 5 % = 21 m2 = exactement 14 colis de 1,5 m2
   const order = { waste: 5, lines: [{ productId: ISO.id, productName: ISO.name, layers: [180], surface: 20 }] };
   assert.equal(c.computeTotals(order, [ISO])[0].packs, 14);
 });
@@ -89,9 +90,10 @@ test("commande : surfaces additionnees sur plusieurs zones", () => {
   assert.equal(rows[0].m2, 20); // 10 + 2 couches x 5
 });
 
-test("multipacs", () => {
-  assert.equal(c.mpText(15, 12), "1 MP + 3 paq.");
-  assert.equal(c.mpText(24, 12), "2 MP");
+test("palettes", () => {
+  assert.equal(c.mpText(15, 12), "1 pal. + 3 colis");
+  assert.equal(c.mpText(24, 12), "2 pal.");
+  assert.equal(c.mpText(94, 12), "7 pal. + 10 colis");
   assert.equal(c.mpText(5, 12), "");
   assert.equal(c.mpText(5, 0), "");
 });
@@ -149,7 +151,7 @@ test("migration : ancienne sauvegarde (V2-V4) reprise sans perte", () => {
   assert.equal(s.orders[0].waste, 8);
   assert.equal(s.orders[0].lines[0].facade, "Sud");   // ancien "repere"
   assert.equal(s.order, undefined);
-  assert.equal(s.products[0].thicknesses[0].m2Pack, 3); // complete depuis le catalogue par defaut
+  assert.equal(s.products[0].thicknesses[0].m2Pack, 3.75); // complete depuis le catalogue par defaut
   assert.equal(s.products[0].density, 40);
 });
 
@@ -231,7 +233,7 @@ test("melange : 1re couche produit A, couches suivantes produit B", () => {
   const k = combos.find(x => x.layers.join() === "120,100");
   assert.deepEqual(k.prods, [ISO.id, "b"]);
   assert.equal(k.total, 220);
-  assert.equal(k.price, 33.7 + 20);
+  assert.equal(k.price, 48.65 + 20);
   assert.ok(combos.every(x => x.prods[0] === ISO.id && x.prods.slice(1).every(id => id === "b")));
   assert.equal(c.allCombosMixed([120], [100], 1, ISO, B).length, 0); // il faut au moins 2 couches
   assert.equal(c.layersLabel([120, 100], [ISO.id, "b"], [ISO, B]), "120 Isover ISORESIST 1000 031 F + 100 Produit B");
@@ -266,8 +268,8 @@ test("livraison : 100 % = tout, comme avant", () => {
   const plan = c.deliveryPlan(bigOrder(100), [ISO], FIX);
   assert.equal(plan.active, false);
   const p120 = plan.items.find(i => i.key === `iso|${ISO.id}|120`);
-  assert.equal(p120.total, 24);
-  assert.equal(p120.now, 24);
+  assert.equal(p120.total, 18);          // 52,5 m2 / 3,00 = 17,5 -> 18 colis
+  assert.equal(p120.now, 18);
 });
 
 test("livraison : 80 % puis solde automatique", () => {
@@ -275,8 +277,8 @@ test("livraison : 80 % puis solde automatique", () => {
   const plan1 = c.deliveryPlan(o, [ISO], FIX);
   assert.equal(plan1.active, true);
   const k120 = `iso|${ISO.id}|120`;
-  assert.equal(plan1.items.find(i => i.key === k120).now, 20);   // 24 x 80 % = 19,2 -> 20 paquets
-  assert.equal(plan1.items.find(i => i.key === k120).after, 4);
+  assert.equal(plan1.items.find(i => i.key === k120).now, 15);   // 18 x 80 % = 14,4 -> 15 colis
+  assert.equal(plan1.items.find(i => i.key === k120).after, 3);
   const anchor = plan1.items.find(i => i.key === "fix|hft-etoile|8x140");
   assert.equal(anchor.unit, "boîte");
   assert.equal(anchor.total, 2);
@@ -284,8 +286,8 @@ test("livraison : 80 % puis solde automatique", () => {
   c.recordDelivery(o, plan1, "2026-10-19");
   const plan2 = c.deliveryPlan(o, [ISO], FIX);
   assert.equal(plan2.number, 2);
-  assert.equal(plan2.items.find(i => i.key === k120).ordered, 20);
-  assert.equal(plan2.items.find(i => i.key === k120).now, 4);    // le solde, pas 20
+  assert.equal(plan2.items.find(i => i.key === k120).ordered, 15);
+  assert.equal(plan2.items.find(i => i.key === k120).now, 3);    // le solde, pas 15
   assert.equal(anchor.after, 0);
   assert.equal(plan2.items.find(i => i.key === "fix|hft-etoile|8x140").now, 0);
   assert.equal(plan2.isBalance, true);
@@ -293,11 +295,11 @@ test("livraison : 80 % puis solde automatique", () => {
   assert.equal(c.deliveryPlan(o, [ISO], FIX).nothingLeft, true);
 });
 
-test("livraison : prix de la livraison au prorata des paquets", () => {
+test("livraison : prix de la livraison au prorata des colis", () => {
   const plan = c.deliveryPlan(bigOrder(50), [ISO], FIX);
   const p120 = plan.items.find(i => i.key === `iso|${ISO.id}|120`);
-  assert.equal(p120.now, 12);
-  assert.equal(Math.round(p120.price * 100) / 100, Math.round(12 * 2.25 * 33.7 * 100) / 100);
+  assert.equal(p120.now, 9);
+  assert.equal(Math.round(p120.price * 100) / 100, Math.round(9 * 3 * 48.65 * 100) / 100);
 });
 
 test("livraison : zone reduite apres coup -> trop commande signale, rien a proposer", () => {
@@ -313,4 +315,29 @@ test("migration : livraisons ajoutees aux anciennes commandes", () => {
   const s = c.migrate({ products: [{ id: ISO.id, name: ISO.name, thicknesses: [] }], orders: [{ id: "o1", name: "A", lines: [] }], currentOrderId: "o1" });
   assert.equal(s.orders[0].deliveryPct, 100);
   assert.deepEqual(s.orders[0].deliveries, []);
+});
+
+// ===== V13.2 : donnees Isover corrigees, colis et palettes =====
+test("migration : anciennes valeurs Isoresist corrigees, valeurs retouchees gardees", () => {
+  const s = c.migrate({ products: [{ id: ISO.id, name: ISO.name, packsPerMP: 12, priceDate: "2026-10-18", thicknesses: [
+    { t: 120, on: true, m2Pack: 2.25, price: 33.7 },   // ancienne valeur par defaut -> corrigee
+    { t: 100, on: true, m2Pack: 3, price: 31 }          // prix retouche a la main -> garde
+  ] }] });
+  const t120 = s.products[0].thicknesses.find(x => x.t === 120), t100 = s.products[0].thicknesses.find(x => x.t === 100);
+  assert.deepEqual([t120.m2Pack, t120.price, t120.packsPerMP], [3, 48.65, 12]);
+  assert.deepEqual([t100.m2Pack, t100.price, t100.packsPerMP], [3, 31, 12]);
+});
+
+test("palettes : nombre de colis par palette propre a chaque epaisseur", () => {
+  const t180 = ISO.thicknesses.find(x => x.t === 180);
+  assert.equal(t180.packsPerMP, 16);
+  const order = { waste: 0, lines: [{ productId: ISO.id, productName: ISO.name, layers: [180], surface: 30 }] };
+  const r = c.computeTotals(order, [ISO])[0];
+  assert.equal(r.packs, 20);
+  assert.equal(c.mpText(r.packs, r.perMP), "1 pal. + 4 colis");
+});
+
+test("import : en-tetes Isover colis / palette", () => {
+  const grid = c.parsePasted("Epaisseur mm\tm2/CI\tCI/palette\tCHF/m2\n120\t3,00\t12\t48,65");
+  assert.deepEqual(c.guessRoles(grid), ["t", "m2Pack", "packsPerMP", "price"]);
 });

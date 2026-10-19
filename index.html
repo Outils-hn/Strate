@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=13.1">
+<link rel="stylesheet" href="styles.css?v=13.2">
 </head>
 <body>
 <header class="topbar">
@@ -126,9 +126,6 @@
       <label>λ (W/m·K)
         <input id="productLambda" type="text" placeholder="ex. 0,031" inputmode="decimal" autocomplete="off">
       </label>
-      <label>Paquets par multipac
-        <input id="productPacksMP" type="number" min="0" step="1" inputmode="numeric">
-      </label>
       <label>Surface plaque (m²)
         <input id="productPlateArea" type="text" placeholder="ex. 0,75" inputmode="decimal" autocomplete="off">
       </label>
@@ -137,10 +134,10 @@
       </label>
     </div>
     <p class="hint" id="densityHint"></p>
-    <p class="hint">Décoche une épaisseur pour l'exclure des calculs (rupture de stock…). Les m² par paquet et le prix servent à la commande.</p>
+    <p class="hint">Décoche une épaisseur pour l'exclure des calculs (rupture de stock…). Les m² par colis, les colis par palette et le prix servent à la commande.</p>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Dispo</th><th class="num">mm</th><th class="num">m²/paquet</th><th class="num">CHF/m²</th><th></th></tr></thead>
+        <thead><tr><th>Dispo</th><th class="num">mm</th><th class="num">m²/colis</th><th class="num">Colis/pal.</th><th class="num">m²/pal.</th><th class="num">CHF/m²</th><th></th></tr></thead>
         <tbody id="thicknessRows"></tbody>
       </table>
     </div>
@@ -310,7 +307,7 @@
   </div>
 </main>
 
-<footer>Conçu par Hugo N. · Strate V13.1</footer>
+<footer>Conçu par Hugo N. · Strate V13.2</footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -326,7 +323,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=13.1"></script>
-<script src="js/app.js?v=13.1"></script>
+<script src="js/core.js?v=13.2"></script>
+<script src="js/app.js?v=13.2"></script>
 </body>
 </html>
