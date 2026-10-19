@@ -12,11 +12,27 @@ let mode = "combo";
 
 function freshState() {
   const o = newOrder("Commande 1");
-  return { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {}, orders: [o], currentOrderId: o.id };
+  return { products: structuredClone(DEFAULT_PRODUCTS), currentId: DEFAULT_PRODUCTS[0].id, inputs: {}, orders: [o], currentOrderId: o.id,
+           fixSystems: structuredClone(DEFAULT_FIX_SYSTEMS), mix: { on: false, outerId: null } };
 }
 
 function orderTotals() {
   return computeTotals(curOrder(), state.products);
+}
+
+function fixTotals() {
+  return computeFixTotals(curOrder(), state.products, state.fixSystems);
+}
+
+function productById(id) {
+  return state.products.find(p => p.id === id);
+}
+
+// Produit des couches suivantes quand le melange est actif (sinon null)
+function outerProduct() {
+  if (!state.mix || !state.mix.on) return null;
+  const b = productById(state.mix.outerId);
+  return b && b.id !== state.currentId ? b : state.products.find(p => p.id !== state.currentId) || null;
 }
 
 function curOrder() {
@@ -60,16 +76,33 @@ function renderProductPicker() {
     `<option value="${p.id}" ${p.id === state.currentId ? "selected" : ""}>${escapeHtml(p.name)}</option>`
   ).join("");
   const p = currentProduct();
-  const on = p.thicknesses.filter(x => x.on).map(x => x.t).sort((a, b) => a - b);
-  const typeLabel = { "souple": "souple", "semi-rigide": "semi-rigide", "rigide": "rigide" }[p.type] || "";
   // Nom complet sous le menu (il est souvent tronque sur telephone)
-  $("productInfo").textContent = `${p.name} · ${typeLabel}${p.density ? ` (${p.density} kg/m³)` : ""}${p.lambda ? ` · λ ${fmt(p.lambda, 3)}` : ""} · ${on.length ? on.join(", ") + " mm" : "aucune épaisseur active"}`;
+  $("productInfo").textContent = productInfoText(p);
+  // Melange : il faut au moins 2 produits dans le catalogue
+  const others = state.products.filter(x => x.id !== p.id);
+  $("mixToggle").checked = !!state.mix.on && others.length > 0;
+  $("mixToggle").disabled = !others.length;
+  $("mixToggle").parentElement.title = others.length ? "" : "Crée d'abord un 2e produit dans le catalogue";
+  const b = outerProduct();
+  $("mixRow").classList.toggle("hidden", !b);
+  $("productLabel").textContent = b ? "1re couche (côté mur)" : "Produit";
+  if (b) {
+    state.mix.outerId = b.id;
+    $("productSelectB").innerHTML = others.map(x =>
+      `<option value="${x.id}" ${x.id === b.id ? "selected" : ""}>${escapeHtml(x.name)}</option>`).join("");
+    $("productInfoB").textContent = productInfoText(b);
+  }
   const hints = {
     "souple": "Produit souple : il se comprime un peu, une tolérance de quelques mm en moins est souvent acceptable.",
     "semi-rigide": "Produit semi-rigide : il se comprime peu, reste prudent avec la tolérance en moins.",
     "rigide": "Produit rigide : aucune compression possible, vise juste ou légèrement au-dessus."
   };
   $("typeHint").textContent = hints[p.type] || "";
+}
+
+function productInfoText(p) {
+  const on = p.thicknesses.filter(x => x.on).map(x => x.t).sort((a, b) => a - b);
+  return `${p.name} · ${p.type || ""}${p.density ? ` (${p.density} kg/m³)` : ""}${p.lambda ? ` · λ ${fmt(p.lambda, 3)}` : ""} · ${on.length ? on.join(", ") + " mm" : "aucune épaisseur active"}`;
 }
 
 function layerColors(layers) {
@@ -79,19 +112,20 @@ function layerColors(layers) {
   return layers.map(t => palette[distinct.indexOf(t) % palette.length]);
 }
 
-function stackHtml(layers) {
+function stackHtml(layers, prods) {
   const total = layers.reduce((a, b) => a + b, 0);
-  const colors = layerColors(layers);
+  // Melange : une couleur par produit ; sinon une couleur par epaisseur
+  const palette = ["var(--layer-a)", "var(--layer-c)"];
+  const colors = isMixed(prods) ? prods.map(id => palette[id === prods[0] ? 0 : 1]) : layerColors(layers);
   return `<div class="stack">${layers.map((t, i) =>
     `<div style="width:${(t / total) * 100}%;background:${colors[i]}">${t}</div>`
   ).join("")}</div>`;
 }
 
 
-function rText(total, product = currentProduct()) {
-  const lambda = Number(product.lambda);
-  if (!lambda) return "";
-  return `R = ${fmt(total / 1000 / lambda)} m²K/W`;
+function rText(c) {
+  const r = comboR(c.layers, c.prods, state.products);
+  return r == null ? "" : `R = ${fmt(r)} m²K/W`;
 }
 
 function diffLabel(total, target) {
@@ -101,7 +135,7 @@ function diffLabel(total, target) {
 }
 
 function addButton(c) {
-  return `<button class="btn small" data-add="${c.layers.join(",")}">+ Commande</button>`;
+  return `<button class="btn small" data-add="${c.layers.join(",")}" data-prods="${c.prods.join(",")}">+ Commande</button>`;
 }
 
 function priceTag(c) {
@@ -109,14 +143,14 @@ function priceTag(c) {
 }
 
 function comboCard(c, target, best, showR, badge = "Recommandée") {
-  const r = showR ? rText(c.total) : "";
+  const r = showR ? rText(c) : "";
   return `<div class="combo ${best ? "best" : ""}">
     <div class="combo-head">
-      <span class="combo-title">${comboLabel(c.layers)} mm${best ? `<span class="badge">${badge}</span>` : ""}</span>
+      <span class="combo-title">${escapeHtml(layersLabel(c.layers, c.prods, state.products))}${best ? `<span class="badge">${badge}</span>` : ""}</span>
       <span class="row" style="margin:0">${priceTag(c)}${addButton(c)}</span>
     </div>
     <span class="meta">${c.total} mm · ${diffLabel(c.total, target)} · ${c.layers.length} couche${c.layers.length > 1 ? "s" : ""}${r ? " · " + r : ""}</span>
-    ${stackHtml(c.layers)}
+    ${stackHtml(c.layers, c.prods)}
   </div>`;
 }
 
@@ -133,7 +167,17 @@ function renderResults() {
   if (!thick.length) { res.innerHTML = `<p class="empty">Active au moins une épaisseur dans le catalogue.</p>`; return; }
   if (!target || target <= 0) { res.innerHTML = `<p class="empty">Saisis une épaisseur cible.</p>`; return; }
 
-  const combos = allCombos(thick, maxLayers, p);
+  // Melange : 1re couche dans le produit A, couches suivantes dans le produit B
+  const b = outerProduct();
+  let combos;
+  if (b) {
+    const thickB = b.thicknesses.filter(x => x.on).map(x => x.t);
+    if (maxLayers < 2) { res.innerHTML = `<p class="empty">Pour mélanger 2 produits, choisis au moins 2 couches.</p>`; return; }
+    if (!thickB.length) { res.innerHTML = `<p class="empty">Active au moins une épaisseur de « ${escapeHtml(b.name)} ».</p>`; return; }
+    combos = allCombosMixed(thick, thickB, maxLayers, p, b);
+  } else {
+    combos = allCombos(thick, maxLayers, p).map(c => ({ ...c, prods: c.layers.map(() => p.id) }));
+  }
 
   if (mode === "combo") {
     $("resultsTitle").textContent = "Combinaisons possibles";
@@ -146,8 +190,9 @@ function renderResults() {
       return;
     }
     // Si toutes les combinaisons ont la meme epaisseur, R est identique : on l'affiche une seule fois
-    const sameTotal = new Set(ok.map(c => c.total)).size === 1;
-    if (sameTotal) $("resultsMeta").textContent = `Toutes à ${ok[0].total} mm${rText(ok[0].total) ? " · " + rText(ok[0].total) : ""}`;
+    // (avec 2 produits, R depend de la repartition : on l'affiche sur chaque carte)
+    const sameTotal = !b && new Set(ok.map(c => c.total)).size === 1;
+    if (sameTotal) $("resultsMeta").textContent = `Toutes à ${ok[0].total} mm${rText(ok[0]) ? " · " + rText(ok[0]) : ""}`;
     res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0, !sameTotal, byPrice ? "Moins chère" : "Recommandée")).join("");
   } else {
     $("resultsTitle").textContent = "Épaisseur réalisable la plus proche";
@@ -166,8 +211,8 @@ function nearestHtml(combos, target) {
     ? `<div class="combo ${c.total === target ? "best" : ""}">
          <div class="combo-head"><span class="meta">${label}</span><span class="row" style="margin:0">${priceTag(c)}${addButton(c)}</span></div>
          <span class="big">${c.total} mm</span>
-         <span class="meta">${comboLabel(c.layers)} mm · ${diffLabel(c.total, target)}${rText(c.total) ? " · " + rText(c.total) : ""}</span>
-         ${stackHtml(c.layers)}
+         <span class="meta">${escapeHtml(layersLabel(c.layers, c.prods, state.products))} · ${diffLabel(c.total, target)}${rText(c) ? " · " + rText(c) : ""}</span>
+         ${stackHtml(c.layers, c.prods)}
        </div>`
     : `<div class="combo"><span class="meta">${label}</span><span class="empty">Rien de réalisable</span></div>`;
   return `<div class="nearest">${block(below, "En dessous")}${block(above, "Au-dessus")}</div>`;
@@ -181,18 +226,19 @@ function renderSurfaceCalc() {
   $("surfaceCalc").textContent = v == null || isPlain ? "" : isNaN(v) ? "Calcul illisible" : `= ${fmt0(v)} m²`;
 }
 
-function addToOrder(layers) {
+function addToOrder(layers, prods) {
   const surface = evalSurface($("surface").value);
   if (!surface || isNaN(surface) || surface <= 0) {
     $("surface").focus();
     toast("Saisis d'abord la surface à isoler");
     return;
   }
-  const p = currentProduct();
+  const p = productById(prods[0]) || currentProduct();
   curOrder().lines.push({
     id: "l" + Date.now(),
     productId: p.id,
     productName: p.name,
+    prods,          // produit de chaque couche (melange possible)
     facade: $("facade").value.trim(),
     etage: $("etage").value.trim(),
     layers,
@@ -212,6 +258,52 @@ function renderOrderPicker() {
     `<option value="${o.id}" ${o.id === curOrder().id ? "selected" : ""}>${escapeHtml(o.name)} (${o.lines.length} zone${o.lines.length > 1 ? "s" : ""})</option>`
   ).join("");
   $("waste").value = curOrder().waste ?? 5;
+  renderFixSettings();
+}
+
+function lineLabel(l) {
+  return layersLabel(l.layers, layerProducts(l), state.products);
+}
+
+// Reglages des fixations de la commande en cours
+function renderFixSettings() {
+  const f = curOrder().fix;
+  $("fixOn").checked = !!f.on;
+  $("fixSettings").classList.toggle("hidden", !f.on);
+  $("anchorQty").value = f.anchorQty ?? "";
+  $("anchorUnit").value = f.anchorUnit;
+  $("spiralQty").value = f.spiralQty ?? "";
+  $("spiralUnit").value = f.spiralUnit;
+  const opts = (kind, cur) => state.fixSystems.filter(x => x.kind === kind)
+    .map(x => `<option value="${x.id}" ${x.id === cur ? "selected" : ""}>${escapeHtml(x.name)}</option>`).join("");
+  $("anchorSystem").innerHTML = opts("cheville", f.anchorSystem) || `<option value="">Aucun (voir catalogue Fixations)</option>`;
+  $("spiralSystem").innerHTML = `<option value="auto" ${f.spiralSystem === "auto" ? "selected" : ""}>Auto (selon la rigidité de la 1re couche)</option>` + opts("spirale", f.spiralSystem);
+}
+
+function fixSummaryHtml() {
+  const f = curOrder().fix;
+  if (!f.on) return "";
+  const { rows, alerts } = fixTotals();
+  const total = rows.reduce((s, r) => s + (r.price || 0), 0);
+  const notes = [...new Set(rows.map(r => r.priceNote).filter(Boolean))].join(" · ");
+  return `
+    <h3>Fixations</h3>
+    ${rows.length ? `<div class="table-wrap" style="margin-top:4px">
+      <table>
+        <thead><tr><th>Article</th><th class="num">Pièces</th><th class="num">Boîtes</th><th class="num">CHF HT</th></tr></thead>
+        <tbody>${rows.map(r => `<tr>
+          <td>${escapeHtml(r.name)}<br><span class="meta">${escapeHtml(r.systemName)}${r.art ? " · " + escapeHtml(r.art) : ""}</span></td>
+          <td class="num">${r.piecesWaste}</td>
+          <td class="num">${r.boxes != null ? `${r.boxes}<br><span class="meta">× ${r.pack}</span>` : "—"}</td>
+          <td class="num">${r.price != null ? fmt(r.price) : "—"}</td></tr>`).join("")}
+        </tbody>
+        ${total ? `<tfoot><tr><td colspan="3">Total fixations</td><td class="num">${fmt(total)}</td></tr></tfoot>` : ""}
+      </table></div>` : ""}
+    ${notes ? `<p class="hint">${escapeHtml(notes.replace(/^./, c => c.toUpperCase()))} · pièces arrondies à la boîte supérieure.</p>` : ""}
+    ${rows.some(r => r.price == null || r.boxes == null) ? `<p class="hint">« — » : prix ou conditionnement manquant dans le catalogue Fixations.</p>` : ""}
+    ${alerts.length ? `<div class="alert-box"><b>⚠ Fixations à vérifier</b><ul>${alerts.map(a =>
+      `<li>${escapeHtml(a.zone)} : ${escapeHtml(a.text)}</li>`).join("")}</ul>
+      Complète le catalogue Fixations ou change de système : l'appli ne devine pas.</div>` : ""}`;
 }
 
 
@@ -240,7 +332,7 @@ function renderOrder() {
     <div class="order-line editable" data-edit="${l.id}" title="Toucher pour modifier">
       <div>
         <b>${escapeHtml(zoneLabel(l))}</b> · ${fmt0(l.surface)} m² <span class="meta">✎</span><br>
-        <span class="meta">${comboLabel(l.layers)} mm${state.products.length > 1 ? " · " + escapeHtml(l.productName) : ""}${l.copied ? " · copié dans Excel" : ""}</span>
+        <span class="meta">${escapeHtml(lineLabel(l))}${state.products.length > 1 && !isMixed(layerProducts(l)) ? " · " + escapeHtml(l.productName) : ""}${curOrder().fix.on ? " · " + escapeHtml(lineFixLabel(l, state.products, state.fixSystems, curOrder().fix)) : ""}${l.copied ? " · copié dans Excel" : ""}</span>
       </div>
       <button class="btn small ghost" data-remove="${l.id}" aria-label="Retirer">✕</button>
     </div>`).join("");
@@ -266,8 +358,18 @@ function renderOrder() {
       </table>
     </div>
     ${total ? `<p class="hint">${escapeHtml(priceDateNote(rows))}</p>` : ""}
-    ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}`;
+    ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}
+    ${fixSummaryHtml()}
+    ${grandTotalHtml(total)}`;
   renderExcelHint();
+}
+
+function grandTotalHtml(isoTotal) {
+  if (!curOrder().fix.on) return "";
+  const fixTotal = fixTotals().rows.reduce((s, r) => s + (r.price || 0), 0);
+  if (!isoTotal || !fixTotal) return "";
+  return `<p style="margin:12px 0 0; font-weight:600; display:flex; justify-content:space-between">
+    <span>Total isolant + fixations</span><span>${fmt(isoTotal + fixTotal)} CHF HT</span></p>`;
 }
 
 function orderText() {
@@ -284,8 +386,17 @@ function orderText() {
     });
     txt += "\n";
   });
+  if (curOrder().fix.on) {
+    const { rows: fr, alerts } = fixTotals();
+    if (fr.length) {
+      txt += "Fixations\n";
+      fr.forEach(r => { txt += `- ${r.name}${r.art ? " (" + r.art + ")" : ""} : ${r.piecesOrdered} pièces${r.boxes != null ? ` = ${r.boxes} boîte${r.boxes > 1 ? "s" : ""} de ${r.pack}` : ""}\n`; });
+      txt += "\n";
+    }
+    if (alerts.length) txt += `(${alerts.length} fixation(s) à vérifier)\n\n`;
+  }
   txt += "Détail par zone :\n";
-  curOrder().lines.forEach(l => { txt += `- ${zoneLabel(l)} : ${fmt0(l.surface)} m², ${comboLabel(l.layers)} mm\n`; });
+  curOrder().lines.forEach(l => { txt += `- ${zoneLabel(l)} : ${fmt0(l.surface)} m², ${lineLabel(l)}\n`; });
   txt += `\n(Quantités avec ${waste} % de chute)`;
   return txt;
 }
@@ -325,13 +436,15 @@ function tsv(header, rows) {
   return lines.join("\n");
 }
 
-const ZONE_HEADER = ["Façade", "Étage", "Produit", "Composition", "Ép. totale (mm)", "Couche 1 (mm)", "Couche 2 (mm)", "Couche 3 (mm)", "Surface (m²)"];
+const ZONE_HEADER = ["Façade", "Étage", "Produit", "Composition", "Ép. totale (mm)", "Couche 1 (mm)", "Couche 2 (mm)", "Couche 3 (mm)", "Surface (m²)", "Fixations"];
 
 function zoneValues(l) {
-  // Couches de la plus epaisse a la plus fine, colonnes fixes pour pouvoir filtrer / sommer
-  const layers = [...l.layers].sort((a, b) => b - a);
-  return [l.facade || "", l.etage || "", l.productName, comboLabel(l.layers),
-    l.layers.reduce((a, b) => a + b, 0), layers[0] ?? "", layers[1] ?? "", layers[2] ?? "", l.surface];
+  // Couche 1 = cote mur ; colonnes fixes pour pouvoir filtrer / sommer
+  const prods = layerProducts(l);
+  const names = [...new Set(prods)].map(id => (productById(id) || {}).name || l.productName).join(" / ");
+  const fix = curOrder().fix.on ? lineFixLabel(l, state.products, state.fixSystems, curOrder().fix) : "";
+  return [l.facade || "", l.etage || "", names, lineLabel(l),
+    l.layers.reduce((a, b) => a + b, 0), l.layers[0] ?? "", l.layers[1] ?? "", l.layers[2] ?? "", l.surface, fix];
 }
 
 function zonesClipboard(lines, withHeader) {
@@ -351,12 +464,22 @@ function recapClipboard() {
   });
   const decs = [0, 0, 2, 2, 0, 0, 2, 2, 2];
   const rows = values.map(v => `<tr>${v.map((x, i) => xlCell(x, { dec: decs[i], fmt: decs[i] ? "0\\.00" : undefined })).join("")}</tr>`);
-  const total = data.reduce((s, r) => s + (r.price || 0), 0);
+  // Fixations : sous-tableau avec son propre en-tete
+  const fixRows = curOrder().fix.on ? fixTotals().rows : [];
+  const fixHeader = ["Fixation", "Article", "N° art.", "Pièces (+ chute)", "Boîtes", "Pièces / boîte", "Pièces commandées", "CHF / 100", "CHF HT"];
+  const fixValues = fixRows.map(r => [r.systemName, r.name, r.art || "", r.piecesWaste, r.boxes ?? "", r.pack ?? "", r.piecesOrdered, r.price100 ?? "", r.price ?? ""]);
+  const fixDecs = [0, 0, 0, 0, 0, 0, 0, 2, 2];
+  if (fixRows.length) {
+    rows.push(`<tr>${fixHeader.map(h => `<td style="${XL.th}">${escapeHtml(h)}</td>`).join("")}</tr>`);
+    fixValues.forEach(v => rows.push(`<tr>${v.map((x, i) => xlCell(x, { dec: fixDecs[i], fmt: fixDecs[i] ? "0\\.00" : undefined })).join("")}</tr>`));
+  }
+  const total = data.reduce((s, r) => s + (r.price || 0), 0) + fixRows.reduce((s, r) => s + (r.price || 0), 0);
   const waste = Number(curOrder().waste) || 0;
   const footer = total
-    ? `<tr><td colspan="8" style="${XL.tot}">Total estimé (prix catalogue, ${waste} % de chute)</td>${xlCell(total, { style: XL.tot, dec: 2, fmt: "#,##0\\.00" })}</tr>`
+    ? `<tr><td colspan="8" style="${XL.tot}">Total estimé${fixRows.length ? " isolant + fixations" : ""} (prix catalogue, ${waste} % de chute)</td>${xlCell(total, { style: XL.tot, dec: 2, fmt: "#,##0\\.00" })}</tr>`
     : "";
-  const text = tsv(header, values) + (total ? `\nTotal estimé\t\t\t\t\t\t\t\t${xlNum(total)}` : "");
+  const text = tsv(header, values) + (fixRows.length ? "\n" + tsv(fixHeader, fixValues) : "")
+    + (total ? `\nTotal estimé\t\t\t\t\t\t\t\t${xlNum(total)}` : "");
   return { html: xlTable(header, rows, footer), text };
 }
 
@@ -435,6 +558,7 @@ function renderCatalog() {
   $("productType").value = p.type;
   $("productLambda").value = p.lambda ?? "";
   $("productPacksMP").value = p.packsPerMP ?? "";
+  $("productPlateArea").value = p.plateArea ?? "";
   $("productPriceDate").value = frDate(p.priceDate);
   $("catalogSub").textContent = `${state.products.length} produit${state.products.length > 1 ? "s" : ""}`;
   const rows = [...p.thicknesses].sort((a, b) => a.t - b.t);
@@ -462,10 +586,12 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
 }
 
-function refreshAll() { renderProductPicker(); renderCatalog(); renderResults(); renderOrder(); saveState(); renderBackupHint(); }
+function refreshAll() { renderProductPicker(); renderCatalog(); renderFixCatalog(); renderResults(); renderOrder(); saveState(); renderBackupHint(); }
 
 // ===== Evenements : calcul =====
 $("productSelect").addEventListener("change", e => { state.currentId = e.target.value; refreshAll(); });
+$("mixToggle").addEventListener("change", e => { state.mix.on = e.target.checked; refreshAll(); });
+$("productSelectB").addEventListener("change", e => { state.mix.outerId = e.target.value; refreshAll(); });
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
 function setMode(m) {
@@ -485,7 +611,7 @@ $("sortMode").addEventListener("change", () => { renderResults(); saveState(); }
 
 $("results").addEventListener("click", e => {
   const btn = e.target.closest("[data-add]");
-  if (btn) addToOrder(btn.dataset.add.split(",").map(Number));
+  if (btn) addToOrder(btn.dataset.add.split(",").map(Number), btn.dataset.prods.split(","));
 });
 
 // ===== Fenetre de dialogue maison =====
@@ -580,7 +706,7 @@ async function editLine(id) {
   if (!l) return;
   const r = await openModal({
     title: "Modifier la zone",
-    text: `${comboLabel(l.layers)} mm${l.copied ? " · déjà copiée dans Excel : pense à corriger aussi ta ligne là-bas." : ""}`,
+    text: `${lineLabel(l)}${l.copied ? " · déjà copiée dans Excel : pense à corriger aussi ta ligne là-bas." : ""}`,
     fields: [
       { id: "surface", label: "Surface (m²) — un calcul est accepté", value: String(l.surface).replace(".", ","), inputmode: "decimal" },
       { id: "facade", label: "Façade", value: l.facade || "" },
@@ -634,6 +760,24 @@ $("copyOrderBtn").addEventListener("click", async () => {
   }
 });
 
+// Reglages des fixations (enregistres dans la commande en cours)
+$("fixOn").addEventListener("change", e => { curOrder().fix.on = e.target.checked; renderOrder(); saveState(); });
+[["anchorQty", "anchorQty", true], ["spiralQty", "spiralQty", true], ["anchorUnit", "anchorUnit"], ["spiralUnit", "spiralUnit"],
+ ["anchorSystem", "anchorSystem"], ["spiralSystem", "spiralSystem"]].forEach(([id, key, num]) => {
+  $(id).addEventListener(num ? "input" : "change", e => {
+    curOrder().fix[key] = num ? Math.max(0, Number(e.target.value) || 0) : e.target.value;
+    // On ne redessine que le recap pour ne pas perdre la saisie en cours
+    renderOrderSummaryOnly();
+    saveState();
+  });
+});
+
+function renderOrderSummaryOnly() {
+  const keep = document.activeElement && document.activeElement.id;
+  renderOrder();
+  if (keep && $(keep)) $(keep).focus();
+}
+
 // Commandes nommees : une par tache / chantier
 $("orderSelect").addEventListener("change", e => { state.currentOrderId = e.target.value; renderOrder(); saveState(); });
 $("newOrderBtn").addEventListener("click", async () => {
@@ -678,6 +822,10 @@ $("productLambda").addEventListener("input", e => {
 });
 $("productPacksMP").addEventListener("input", e => {
   currentProduct().packsPerMP = Number(e.target.value) || null;
+  renderOrder(); saveState();
+});
+$("productPlateArea").addEventListener("input", e => {
+  currentProduct().plateArea = Number(e.target.value) || null;
   renderOrder(); saveState();
 });
 // Date saisie en jj.mm.aaaa (ou jj/mm/aaaa), stockee en aaaa-mm-jj
@@ -787,8 +935,11 @@ function buildPrintView() {
   const o = curOrder();
   const rows = orderTotals();
   const waste = Number(o.waste) || 0;
-  const products = [...new Set(o.lines.map(l => l.productName))];
+  const products = [...new Set(o.lines.flatMap(l => layerProducts(l).map(id => (productById(id) || {}).name || l.productName)))];
   const total = rows.reduce((s, r) => s + (r.price || 0), 0);
+  const fixOn = o.fix.on;
+  const fix = fixOn ? fixTotals() : { rows: [], alerts: [] };
+  const fixTotal = fix.rows.reduce((s, r) => s + (r.price || 0), 0);
   const today = frDate(todayIso());
 
   // Regroupe les zones par facade (sans facade a la fin), puis tri par etage
@@ -811,14 +962,15 @@ function buildPrintView() {
     return `<div class="pv-facade">
       <h3>${f ? "Façade " + escapeHtml(f) : "Sans façade précisée"}</h3>
       <table>
-        <thead><tr><th>Étage</th><th>Composition</th>${multiProduct ? "<th>Produit</th>" : ""}<th class="num">Ép. totale</th><th class="num">Surface</th></tr></thead>
+        <thead><tr><th>Étage</th><th>Composition</th>${multiProduct ? "<th>Produit</th>" : ""}${fixOn ? "<th>Fixations</th>" : ""}<th class="num">Ép. totale</th><th class="num">Surface</th></tr></thead>
         <tbody>${lines.map(l => `<tr>
           <td>${escapeHtml(l.etage || "—")}</td>
-          <td>${comboLabel(l.layers)} mm</td>
-          ${multiProduct ? `<td>${escapeHtml(l.productName)}</td>` : ""}
+          <td>${escapeHtml(lineLabel(l))}</td>
+          ${multiProduct ? `<td>${escapeHtml(isMixed(layerProducts(l)) ? "voir composition" : l.productName)}</td>` : ""}
+          ${fixOn ? `<td>${escapeHtml(lineFixLabel(l, state.products, state.fixSystems, o.fix))}</td>` : ""}
           <td class="num">${l.layers.reduce((a, b) => a + b, 0)} mm</td>
           <td class="num">${fmt(l.surface)} m²</td></tr>`).join("")}
-          <tr class="pv-total"><td colspan="${multiProduct ? 4 : 3}">Total façade</td><td class="num">${fmt(surf)} m²</td></tr>
+          <tr class="pv-total"><td colspan="${3 + (multiProduct ? 1 : 0) + (fixOn ? 1 : 0)}">Total façade</td><td class="num">${fmt(surf)} m²</td></tr>
         </tbody>
       </table>
       <p class="pv-subtot">Matière nette : ${sub}</p>
@@ -840,6 +992,21 @@ function buildPrintView() {
     </tbody>
   </table>`;
 
+  const fixHtml = fix.rows.length ? `<table>
+    <thead><tr><th>Fixation</th><th>Article</th><th>N° art.</th><th class="num">Pièces (+ chute)</th><th class="num">Boîtes</th><th class="num">Pièces cdées</th>${fixTotal ? '<th class="num">CHF HT</th>' : ""}</tr></thead>
+    <tbody>${fix.rows.map(r => `<tr>
+      <td>${escapeHtml(r.systemName)}</td><td>${escapeHtml(r.name)}</td><td>${escapeHtml(r.art || "")}</td>
+      <td class="num">${r.piecesWaste}</td>
+      <td class="num">${r.boxes != null ? `${r.boxes} × ${r.pack}` : "—"}</td>
+      <td class="num">${r.piecesOrdered}</td>
+      ${fixTotal ? `<td class="num">${r.price != null ? fmt(r.price) : "—"}</td>` : ""}</tr>`).join("")}
+      ${fixTotal ? `<tr class="pv-total"><td colspan="6">Total fixations</td><td class="num">${fmt(fixTotal)}</td></tr>` : ""}
+    </tbody>
+  </table>` : "";
+  const fixAlertHtml = fix.alerts.length
+    ? `<p class="pv-subtot"><b>⚠ Fixations à vérifier :</b> ${fix.alerts.map(a => escapeHtml(`${a.zone} : ${a.text}`)).join(" · ")}</p>` : "";
+  const fixNotes = [...new Set(fix.rows.map(r => r.priceNote).filter(Boolean))].join(", ");
+
   $("printView").innerHTML = `
     <h1>Bon de commande – Isolation</h1>
     <p class="pv-sub">${escapeHtml(o.name)}</p>
@@ -849,11 +1016,13 @@ function buildPrintView() {
       <span><b>Zones :</b> ${o.lines.length}</span>
       <span><b>Chute :</b> ${waste} %</span>
     </div>
-    <h2>À commander</h2>
+    <h2>À commander${fixOn ? " – isolant" : ""}</h2>
     ${recapHtml}
+    ${fixOn ? `<h2>À commander – fixations</h2>${fixHtml}${fixAlertHtml}` : ""}
+    ${total && fixTotal ? `<p style="font-weight:700; margin-top:8px">Total estimé isolant + fixations : ${fmt(total + fixTotal)} CHF HT</p>` : ""}
     <h2>Détail par façade et par étage</h2>
     ${facadeHtml}
-    <p class="pv-foot">Quantités arrondies au paquet supérieur, chute de ${waste} % incluse.${total ? " " + escapeHtml(priceDateNote(rows).replace(/^./, c => c.toUpperCase())) + ", prix indicatifs." : ""} Établi avec Strate le ${today}.</p>`;
+    <p class="pv-foot">Quantités arrondies au paquet supérieur, chute de ${waste} % incluse.${total ? " " + escapeHtml(priceDateNote(rows).replace(/^./, c => c.toUpperCase())) + ", prix indicatifs." : ""}${fixNotes ? " Fixations : " + escapeHtml(fixNotes) + ", arrondies à la boîte supérieure." : ""} Établi avec Strate le ${today}.</p>`;
 }
 
 $("pdfBtn").addEventListener("click", () => {
@@ -866,6 +1035,153 @@ $("pdfBtn").addEventListener("click", () => {
   window.addEventListener("afterprint", restore);
   window.print();
   setTimeout(restore, 1000);
+});
+
+// ===== Catalogue des fixations =====
+let fixSysId = null;
+
+function currentFixSystem() {
+  return state.fixSystems.find(x => x.id === fixSysId) || state.fixSystems[0] || null;
+}
+
+function renderFixCatalog() {
+  const sys = currentFixSystem();
+  $("fixSub").textContent = `${state.fixSystems.length} système${state.fixSystems.length > 1 ? "s" : ""}`;
+  $("fixSystemSelect").innerHTML = state.fixSystems.map(x =>
+    `<option value="${x.id}" ${sys && x.id === sys.id ? "selected" : ""}>${escapeHtml(x.name)}</option>`).join("");
+  const has = !!sys;
+  ["renameFixSystemBtn", "deleteFixSystemBtn", "addFixArticleBtn"].forEach(id => $(id).disabled = !has);
+  if (!sys) {
+    $("fixKindHint").textContent = "Aucun système : crée-en un, ou recharge le catalogue HFT.";
+    $("fixArticlesHead").innerHTML = ""; $("fixArticles").innerHTML = ""; $("fixRulesBox").classList.add("hidden");
+    return;
+  }
+  fixSysId = sys.id;
+  const isAnchor = sys.kind === "cheville";
+  $("fixKindHint").textContent = isAnchor
+    ? "Cheville pour la 1re couche (côté mur) : l'appli prend la plus courte dont la « fixation max » couvre l'épaisseur de la couche."
+    : "Spirale pour les couches suivantes : l'appli suit l'abaque ci-dessous, ligne par ligne.";
+  $("fixHardnessLabel").classList.toggle("hidden", isAnchor);
+  $("fixHardness").value = sys.hardness || "dur";
+  $("fixPriceNote").value = sys.priceNote || "";
+  $("fixArticlesHead").innerHTML = `<tr><th>Désignation</th><th>N° art.</th>${isAnchor ? '<th class="num">Fixation max (mm)</th>' : ""}<th class="num">CHF / 100</th><th class="num">Pièces / boîte</th><th></th></tr>`;
+  $("fixArticles").innerHTML = sys.articles.map((a, i) => `<tr data-i="${i}">
+    <td><input data-f="name" value="${escapeHtml(a.name)}"></td>
+    <td><input data-f="art" value="${escapeHtml(a.art || "")}"></td>
+    ${isAnchor ? `<td class="num"><input data-f="max" type="number" min="0" value="${a.max ?? ""}" inputmode="numeric"></td>` : ""}
+    <td class="num"><input data-f="price100" type="number" min="0" step="0.05" value="${a.price100 ?? ""}" inputmode="decimal"></td>
+    <td class="num"><input data-f="pack" type="number" min="0" step="1" value="${a.pack ?? ""}" inputmode="numeric"></td>
+    <td><button class="btn small ghost" data-delart="${i}" aria-label="Supprimer">✕</button></td></tr>`).join("")
+    || `<tr><td colspan="6" class="empty">Aucun article.</td></tr>`;
+  $("fixRulesBox").classList.toggle("hidden", isAnchor);
+  if (!isAnchor) {
+    sys.rules = sys.rules || [];
+    const artOpts = cur => sys.articles.map(a => `<option value="${escapeHtml(a.id)}" ${a.id === cur ? "selected" : ""}>${escapeHtml(a.name)}</option>`).join("");
+    $("fixRules").innerHTML = sys.rules.map((r, i) => `<tr data-i="${i}">
+      <td class="num"><input data-r="baseMin" type="number" min="0" value="${r.baseMin ?? ""}" inputmode="numeric"></td>
+      <td class="num"><input data-r="baseMax" type="number" min="0" value="${r.baseMax ?? ""}" inputmode="numeric"></td>
+      <td class="num"><input data-r="add" type="number" min="0" value="${r.add ?? ""}" inputmode="numeric"></td>
+      <td><select data-r="article">${artOpts(r.article)}</select></td>
+      <td><button class="btn small ghost" data-delrule="${i}" aria-label="Supprimer">✕</button></td></tr>`).join("")
+      || `<tr><td colspan="5" class="empty">Aucune ligne.</td></tr>`;
+  }
+}
+
+// Apres une modif du catalogue : on recalcule la commande et on garde le champ actif
+function afterFixEdit() {
+  saveState();
+  renderOrder();
+}
+
+$("fixSystemSelect").addEventListener("change", e => { fixSysId = e.target.value; renderFixCatalog(); });
+$("fixHardness").addEventListener("change", e => { currentFixSystem().hardness = e.target.value; afterFixEdit(); });
+$("fixPriceNote").addEventListener("input", e => { currentFixSystem().priceNote = e.target.value; afterFixEdit(); });
+
+$("fixArticles").addEventListener("input", e => {
+  const f = e.target.dataset.f, tr = e.target.closest("tr");
+  if (!f || !tr) return;
+  const sys = currentFixSystem(), a = sys.articles[Number(tr.dataset.i)];
+  if (f === "name") {
+    // L'identifiant suit le nom : on met aussi a jour les lignes d'abaque qui l'utilisent
+    const old = a.id, v = e.target.value.trim() || old;
+    (sys.rules || []).forEach(r => { if (r.article === old) r.article = v; });
+    a.id = v; a.name = v;
+  } else if (f === "art") a.art = e.target.value.trim();
+  else a[f] = e.target.value === "" ? null : Number(e.target.value);
+  afterFixEdit();
+});
+$("fixArticles").addEventListener("change", e => { if (e.target.dataset.f === "name") renderFixCatalog(); });
+$("fixArticles").addEventListener("click", async e => {
+  const b = e.target.closest("[data-delart]");
+  if (!b) return;
+  const sys = currentFixSystem(), a = sys.articles[Number(b.dataset.delart)];
+  if (!await confirmModal("Supprimer l'article ?", `« ${a.name} » sera retiré de ${sys.name}.`, "Supprimer", true)) return;
+  sys.articles.splice(Number(b.dataset.delart), 1);
+  if (sys.rules) sys.rules = sys.rules.filter(r => r.article !== a.id);
+  renderFixCatalog(); afterFixEdit();
+});
+$("addFixArticleBtn").addEventListener("click", async () => {
+  const sys = currentFixSystem();
+  const name = await askText("Nouvel article", "Désignation", "", sys.kind === "cheville" ? "ex. 8x140" : "ex. U200");
+  if (!name) return;
+  if (sys.articles.some(a => a.id === name)) { toast("Cet article existe déjà"); return; }
+  sys.articles.push({ id: name, name, art: "", max: null, price100: null, pack: null });
+  renderFixCatalog(); afterFixEdit();
+});
+
+$("fixRules").addEventListener("input", e => {
+  const k = e.target.dataset.r, tr = e.target.closest("tr");
+  if (!k || !tr) return;
+  const r = currentFixSystem().rules[Number(tr.dataset.i)];
+  r[k] = k === "article" ? e.target.value : (e.target.value === "" ? null : Number(e.target.value));
+  afterFixEdit();
+});
+$("fixRules").addEventListener("click", e => {
+  const b = e.target.closest("[data-delrule]");
+  if (!b) return;
+  currentFixSystem().rules.splice(Number(b.dataset.delrule), 1);
+  renderFixCatalog(); afterFixEdit();
+});
+$("addFixRuleBtn").addEventListener("click", () => {
+  const sys = currentFixSystem();
+  if (!sys.articles.length) { toast("Ajoute d'abord un article"); return; }
+  const last = sys.rules[sys.rules.length - 1];
+  sys.rules.push({ baseMin: last ? last.baseMin : null, baseMax: last ? last.baseMax : null, add: null, article: sys.articles[0].id });
+  renderFixCatalog(); afterFixEdit();
+});
+
+$("newFixSystemBtn").addEventListener("click", async () => {
+  const r = await openModal({
+    title: "Nouveau système de fixation",
+    text: "Cheville = 1re couche (choix selon la fixation max). Spirale = couches suivantes (choix selon un abaque).",
+    fields: [{ id: "name", label: "Nom", placeholder: "ex. Ejot STR U" }],
+    buttons: [{ label: "Annuler", value: "cancel", ghost: true }, { label: "Spirale", value: "spirale" }, { label: "Cheville", value: "cheville", primary: true }],
+    validate: v => v.name.trim() ? "" : "Donne un nom au système."
+  });
+  if (!r || r.button === "cancel" || !r.values.name.trim()) return;
+  const sys = { id: "f" + Date.now(), name: r.values.name.trim(), kind: r.button, priceNote: "", articles: [] };
+  if (r.button === "spirale") { sys.hardness = "dur"; sys.rules = []; }
+  state.fixSystems.push(sys);
+  fixSysId = sys.id;
+  renderFixCatalog(); afterFixEdit();
+});
+$("renameFixSystemBtn").addEventListener("click", async () => {
+  const sys = currentFixSystem();
+  const name = await askText("Renommer le système", "Nom", sys.name);
+  if (name) { sys.name = name; renderFixCatalog(); afterFixEdit(); }
+});
+$("deleteFixSystemBtn").addEventListener("click", async () => {
+  const sys = currentFixSystem();
+  if (!await confirmModal("Supprimer le système ?", `« ${sys.name} » et tous ses articles seront supprimés.`, "Supprimer", true)) return;
+  state.fixSystems = state.fixSystems.filter(x => x.id !== sys.id);
+  fixSysId = null;
+  renderFixCatalog(); afterFixEdit();
+});
+$("resetFixBtn").addEventListener("click", async () => {
+  if (!await confirmModal("Recharger le catalogue HFT ?", "Les systèmes HFT d'origine remplacent tout le catalogue des fixations (tes modifications et ajouts seront perdus).", "Recharger", true)) return;
+  state.fixSystems = structuredClone(DEFAULT_FIX_SYSTEMS);
+  fixSysId = null;
+  renderFixCatalog(); afterFixEdit();
 });
 
 // ===== Theme clair / sombre =====
@@ -1110,6 +1426,7 @@ function restoreInputs() {
 }
 
 restoreInputs();
+renderFixCatalog();
 renderProductPicker();
 renderCatalog();
 renderOrder();

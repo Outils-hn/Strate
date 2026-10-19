@@ -13,6 +13,8 @@
   --layer-b: #e8a33d;
   --layer-c: #d9822b;
   --radius: 10px;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
   --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%236b6963' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   /* Indique au navigateur le theme : menus, barres de defilement et cases a cocher suivent */
   color-scheme: light;
@@ -32,6 +34,8 @@
     --layer-a: #b8932f;
     --layer-b: #a87526;
     --layer-c: #965c1f;
+    --warn: #fbbf24;
+    --warn-soft: #3a2a0c;
     --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23a29f98' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     color-scheme: dark;
   }
@@ -237,3 +241,17 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding-botto
   #printView .pv-subtot { font-size: 9.5pt; color: #333; margin: 2px 0 0; }
   #printView .pv-foot { margin-top: 18px; font-size: 8.5pt; color: #666; border-top: .5pt solid #ccc; padding-top: 6px; }
 }
+
+/* V10 : melange de produits et fixations */
+.check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); margin-top: 12px; cursor: pointer; }
+.check-row input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+#mixRow { margin-top: 10px; }
+.fix-box { margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.fix-box .grid { margin-top: 10px; }
+.qty-row { display: flex; gap: 6px; }
+.qty-row input { max-width: 80px; }
+.alert-box { margin-top: 10px; padding: 10px 12px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+.alert-box ul { margin: 4px 0 0; padding-left: 18px; }
+.warn { color: var(--warn); font-weight: 600; }
+#fixRules select { min-width: 96px; }
+#fixRules input, #fixArticles input { min-width: 64px; }

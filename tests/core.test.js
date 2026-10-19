@@ -152,3 +152,106 @@ test("migration : ancienne sauvegarde (V2-V4) reprise sans perte", () => {
   assert.equal(s.products[0].thicknesses[0].m2Pack, 3); // complete depuis le catalogue par defaut
   assert.equal(s.products[0].density, 40);
 });
+
+// ===== V10 : fixations et melange de produits =====
+const FIX = c.DEFAULT_FIX_SYSTEMS;
+const ETOILE = FIX.find(s => s.id === "hft-etoile");
+const DRALL = FIX.find(s => s.id === "hft-drallfix");
+const DRILL = FIX.find(s => s.id === "hft-drillfast");
+
+test("cheville : la plus courte qui couvre la couche (tableau HFT)", () => {
+  assert.equal(c.pickAnchor(ETOILE, 120).id, "8x140"); // fixation max 120
+  assert.equal(c.pickAnchor(ETOILE, 100).id, "8x120");
+  assert.equal(c.pickAnchor(ETOILE, 160).id, "8x200"); // 8x180 = 150 max, trop court
+  assert.equal(c.pickAnchor(ETOILE, 40).id, "8x60");
+  assert.equal(c.pickAnchor(ETOILE, 300), null);       // au-dela du catalogue -> alerte
+});
+
+test("spirales : abaques Drall-Fix et Drillfast, sinon rien", () => {
+  assert.equal(c.pickSpiral(DRALL, 120, 100).id, "U200");
+  assert.equal(c.pickSpiral(DRALL, 140, 100).id, "U200"); // ligne 120/140/160
+  assert.equal(c.pickSpiral(DRALL, 100, 100).id, "U180");
+  assert.equal(c.pickSpiral(DRILL, 120, 100).id, "N200");
+  assert.equal(c.pickSpiral(DRILL, 100, 30).id, "N75");
+  assert.equal(c.pickSpiral(DRILL, 140, 80), null);       // absent du tableau -> alerte
+  assert.equal(c.pickSpiral(DRALL, 180, 40), null);
+});
+
+test("systeme de spirale auto selon la rigidite de la 1re couche", () => {
+  const fix = c.defaultFix();
+  assert.equal(c.spiralSystemFor(fix, FIX, { type: "semi-rigide" }).id, "hft-drallfix");
+  assert.equal(c.spiralSystemFor(fix, FIX, { type: "souple" }).id, "hft-drillfast");
+  assert.equal(c.spiralSystemFor({ ...fix, spiralSystem: "hft-drillfast" }, FIX, { type: "rigide" }).id, "hft-drillfast");
+});
+
+test("fixations d'une zone : cheville sur la 1re couche, spirale ensuite", () => {
+  const line = { id: "l1", productId: ISO.id, layers: [120, 100], surface: 7.5 };
+  const r = c.lineFixations(line, [ISO], FIX, c.defaultFix()); // 5 par plaque de 0,75 m2
+  assert.deepEqual(r.alerts, []);
+  assert.equal(r.items[0].articleId, "8x140");
+  assert.equal(r.items[1].articleId, "U200");
+  assert.equal(Math.round(r.items[0].pieces), 50); // 7,5 m2 = 10 plaques x 5
+});
+
+test("fixations : par m2, et alerte si format de plaque inconnu", () => {
+  const line = { id: "l1", productId: "x", layers: [100], surface: 10 };
+  const prod = { id: "x", name: "Sans format", type: "souple", thicknesses: [] };
+  const perM2 = c.lineFixations(line, [prod], FIX, { ...c.defaultFix(), anchorUnit: "m2", anchorQty: 4 });
+  assert.equal(perM2.items[0].pieces, 40);
+  const perPlate = c.lineFixations(line, [prod], FIX, c.defaultFix());
+  assert.equal(perPlate.items.length, 0);
+  assert.match(perPlate.alerts[0], /surface de plaque/);
+});
+
+test("recap fixations : chute, boites entieres, prix", () => {
+  const order = { waste: 5, fix: c.defaultFix(), lines: [
+    { id: "l1", productId: ISO.id, layers: [120, 100], surface: 42.5 }
+  ] };
+  const { rows, alerts } = c.computeFixTotals(order, [ISO], FIX);
+  assert.equal(alerts.length, 0);
+  const anchor = rows.find(r => r.articleId === "8x140");
+  // 42,5 m2 / 0,75 x 5 = 283,3 -> +5 % = 297,5 -> 298 pieces -> 2 boites de 200
+  assert.equal(anchor.piecesWaste, 298);
+  assert.equal(anchor.boxes, 2);
+  assert.equal(anchor.piecesOrdered, 400);
+  assert.equal(anchor.price, 54); // 400 x 13,50 / 100
+  assert.equal(rows[0].kind, "cheville"); // chevilles listees avant les spirales
+});
+
+test("recap fixations : desactive = rien", () => {
+  const order = { waste: 5, fix: { ...c.defaultFix(), on: false }, lines: [
+    { id: "l1", productId: ISO.id, layers: [120, 100], surface: 42.5 }
+  ] };
+  assert.equal(c.computeFixTotals(order, [ISO], FIX).rows.length, 0);
+});
+
+test("melange : 1re couche produit A, couches suivantes produit B", () => {
+  const B = { id: "b", name: "Produit B", lambda: 0.035, thicknesses: [{ t: 100, price: 20 }, { t: 60, price: 12 }] };
+  const combos = c.allCombosMixed([120, 100], [100, 60], 2, ISO, B);
+  const k = combos.find(x => x.layers.join() === "120,100");
+  assert.deepEqual(k.prods, [ISO.id, "b"]);
+  assert.equal(k.total, 220);
+  assert.equal(k.price, 33.7 + 20);
+  assert.ok(combos.every(x => x.prods[0] === ISO.id && x.prods.slice(1).every(id => id === "b")));
+  assert.equal(c.allCombosMixed([120], [100], 1, ISO, B).length, 0); // il faut au moins 2 couches
+  assert.equal(c.layersLabel([120, 100], [ISO.id, "b"], [ISO, B]), "120 Isover ISORESIST 1000 031 F + 100 Produit B");
+  assert.equal(c.layersLabel([120, 100], [ISO.id, ISO.id], [ISO]), "120 + 100 mm");
+  // R = 0,12 / 0,031 + 0,10 / 0,035
+  assert.ok(Math.abs(c.comboR([120, 100], [ISO.id, "b"], [ISO, B]) - (0.12 / 0.031 + 0.1 / 0.035)) < 1e-9);
+});
+
+test("melange : le recap separe les produits", () => {
+  const B = { id: "b", name: "Produit B", thicknesses: [{ t: 100, m2Pack: 3, price: 20 }] };
+  const order = { waste: 0, lines: [{ id: "l1", productId: ISO.id, productName: ISO.name, prods: [ISO.id, "b"], layers: [120, 100], surface: 9 }] };
+  const rows = c.computeTotals(order, [ISO, B]);
+  assert.equal(rows.length, 2);
+  assert.equal(rows.find(r => r.productId === "b").packs, 3);
+  assert.equal(rows.find(r => r.productId === ISO.id).t, 120);
+});
+
+test("migration : fixations et format de plaque ajoutes aux anciennes donnees", () => {
+  const s = c.migrate({ products: [{ id: ISO.id, name: ISO.name, thicknesses: [] }], orders: [{ id: "o1", name: "A", lines: [], waste: 5 }], currentOrderId: "o1" });
+  assert.equal(s.orders[0].fix.on, true);
+  assert.equal(s.fixSystems.length, 3);
+  assert.equal(s.products[0].plateArea, 0.75);
+});
