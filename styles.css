@@ -79,6 +79,7 @@ main { max-width: 880px; margin: 0 auto; padding: 8px 16px 40px; display: grid; 
 .col-main, .col-side { display: contents; }
 #orderCard { order: 3; }
 #catalogCard { order: 4; }
+#fixCard { order: 4; }
 #backupCard { order: 5; }
 /* Sur grand ecran : calcul a gauche, commande a droite (toujours visible) */
 @media (min-width: 1100px) {
@@ -255,3 +256,17 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding-botto
 .warn { color: var(--warn); font-weight: 600; }
 #fixRules select { min-width: 96px; }
 #fixRules input, #fixArticles input { min-width: 64px; }
+
+/* V10.1 : reglages de la commande */
+.settings-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.inline-field { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 14px; }
+.inline-field input { width: 70px; }
+#fixSettings { display: grid; gap: 8px; margin-top: 12px; }
+.fix-line { display: grid; grid-template-columns: minmax(100px, auto) 60px 116px minmax(0, 1fr); gap: 8px; align-items: center; }
+.fix-what { font-size: 14px; line-height: 1.2; }
+.fix-what .meta { display: block; font-size: 12px; }
+.fix-sys { min-width: 0; text-overflow: ellipsis; }
+@media (max-width: 520px) {
+  .fix-line { grid-template-columns: 1fr 60px 116px; }
+  .fix-line .fix-sys { grid-column: 1 / -1; }
+}

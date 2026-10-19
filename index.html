@@ -9,7 +9,7 @@
   try { const t = localStorage.getItem("strate.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
 <meta name="description" content="Combinaisons d'epaisseurs d'isolation et commande">
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=10.1">
 </head>
 <body>
 <header>
@@ -243,31 +243,31 @@
       <button class="btn small ghost" id="deleteOrderBtn">Supprimer</button>
     </div>
     <div id="orderLines"></div>
-    <div id="orderSummary"></div>
-    <div id="orderActions">
-      <!-- Reglages des fixations de cette commande -->
-      <div class="fix-box">
+    <!-- Reglages de la commande : chute + fixations (avant le recap qu'ils calculent) -->
+    <div id="orderSettings" class="fix-box">
+      <div class="settings-head">
+        <label class="inline-field">Chute
+          <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric"> %
+        </label>
         <label class="check-row" style="margin-top:0"><input type="checkbox" id="fixOn"> Calculer les fixations</label>
-        <div id="fixSettings" class="grid">
-          <label>Chevilles (1re couche)
-            <span class="qty-row"><input id="anchorQty" type="number" min="0" step="0.5" inputmode="decimal">
-              <select id="anchorUnit"><option value="plaque">par plaque</option><option value="m2">par m²</option></select></span>
-          </label>
-          <label>Système chevilles
-            <select id="anchorSystem"></select>
-          </label>
-          <label>Spirales (couches suivantes)
-            <span class="qty-row"><input id="spiralQty" type="number" min="0" step="0.5" inputmode="decimal">
-              <select id="spiralUnit"><option value="plaque">par plaque</option><option value="m2">par m²</option></select></span>
-          </label>
-          <label>Système spirales
-            <select id="spiralSystem"></select>
-          </label>
+      </div>
+      <div id="fixSettings">
+        <div class="fix-line">
+          <span class="fix-what">Chevilles <span class="meta">1re couche</span></span>
+          <input id="anchorQty" type="number" min="0" step="0.5" inputmode="decimal" aria-label="Nombre de chevilles">
+          <select id="anchorUnit" aria-label="Unité"><option value="plaque">/ plaque</option><option value="m2">/ m²</option></select>
+          <select id="anchorSystem" class="fix-sys" aria-label="Système de chevilles"></select>
+        </div>
+        <div class="fix-line">
+          <span class="fix-what">Spirales <span class="meta">couches suiv.</span></span>
+          <input id="spiralQty" type="number" min="0" step="0.5" inputmode="decimal" aria-label="Nombre de spirales">
+          <select id="spiralUnit" aria-label="Unité"><option value="plaque">/ plaque</option><option value="m2">/ m²</option></select>
+          <select id="spiralSystem" class="fix-sys" aria-label="Système de spirales"></select>
         </div>
       </div>
-      <label style="max-width:140px; margin-top:12px">Chute (%)
-        <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric">
-      </label>
+    </div>
+    <div id="orderSummary"></div>
+    <div id="orderActions">
       <div class="row">
         <button class="btn primary" id="copyExcelBtn">Copier pour Excel</button>
         <button class="btn" id="copyRecapBtn">Copier le récap</button>
@@ -284,7 +284,7 @@
   </div>
 </main>
 
-<footer>Strate · V10</footer>
+<footer>Strate · V10.1</footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -300,7 +300,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=10"></script>
-<script src="js/app.js?v=10"></script>
+<script src="js/core.js?v=10.1"></script>
+<script src="js/app.js?v=10.1"></script>
 </body>
 </html>
