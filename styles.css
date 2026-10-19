@@ -270,3 +270,21 @@ footer { text-align: center; color: var(--muted); font-size: 12px; padding-botto
   .fix-line { grid-template-columns: 1fr 60px 116px; }
   .fix-line .fix-sys { grid-column: 1 / -1; }
 }
+
+/* V11 : aides, guide, livraisons */
+.help {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; padding: 0; margin-left: 4px; vertical-align: middle;
+  border-radius: 50%; border: 1px solid var(--line); background: transparent;
+  color: var(--muted); font: 600 11px/1 system-ui, sans-serif; cursor: pointer;
+}
+.help:hover { border-color: var(--accent); color: var(--accent); }
+.delivery-box { margin-top: 14px; padding: 12px; border: 1px dashed var(--accent); border-radius: var(--radius); }
+.delivery-box h3 { margin-top: 0; }
+.delivery-hist { display: grid; gap: 4px; margin: 6px 0 10px; font-size: 13px; }
+.delivery-hist div { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+td.now { font-weight: 700; color: var(--accent); }
+.done-ok { color: var(--ok); font-weight: 600; }
+.guide-step { font-size: 12px; color: var(--accent); font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+.modal .guide-body { font-size: 14px; line-height: 1.55; }
+.modal .guide-body ol, .modal .guide-body ul { padding-left: 20px; margin: 6px 0; }

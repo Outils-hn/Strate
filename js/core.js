@@ -107,7 +107,8 @@
   const fmt0 = v => Number(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
 
   function newOrder(name) {
-    return { id: "o" + Date.now() + Math.floor(Math.random() * 1000), name, lines: [], waste: 5, fix: defaultFix() };
+    return { id: "o" + Date.now() + Math.floor(Math.random() * 1000), name, lines: [], waste: 5, fix: defaultFix(),
+             deliveryPct: 100, deliveries: [] };
   }
 
   // Les catalogues sauves par la V1 n'ont pas les m2/paquet ni les prix :
@@ -128,6 +129,11 @@
     s.orders.forEach(o => o.lines.forEach(l => { if (l.repere && !l.facade) { l.facade = l.repere; delete l.repere; } }));
     // V10 : fixations
     s.orders.forEach(o => { o.fix = Object.assign(defaultFix(), o.fix || {}); });
+    // V11 : livraisons partielles
+    s.orders.forEach(o => {
+      if (o.deliveryPct == null) o.deliveryPct = 100;
+      if (!Array.isArray(o.deliveries)) o.deliveries = [];
+    });
     if (!Array.isArray(s.fixSystems)) s.fixSystems = JSON.parse(JSON.stringify(DEFAULT_FIX_SYSTEMS));
     // V10 : melange de 2 produits
     s.mix = s.mix || { on: false, outerId: null };
@@ -393,6 +399,62 @@
     return { rows, alerts };
   }
 
+  // ===== Livraisons partielles =====
+  // Chaque livraison = X % du total (arrondi a l'unite de commande superieure),
+  // sans jamais depasser ce qui reste. Avec 80 % puis 80 %, la 2e livraison
+  // propose donc automatiquement le solde.
+  // Unite de commande : paquet pour l'isolant, boite pour les fixations
+  // (a defaut : m2 ou pieces si le conditionnement est inconnu).
+  function deliveryPlan(order, products, systems) {
+    const pct = Math.min(100, Math.max(0, Number(order.deliveryPct) || 0));
+    const done = {};
+    (order.deliveries || []).forEach(d => Object.entries(d.items || {}).forEach(([k, v]) => { done[k] = (done[k] || 0) + v; }));
+    const items = [];
+    computeTotals(order, products).forEach(r => {
+      const byPack = r.packs != null;
+      const total = byPack ? r.packs : Math.round(r.m2Waste * 100) / 100;
+      items.push({ key: `iso|${r.productId}|${r.t}`, kind: "iso", label: `${r.t} mm`, productName: r.productName,
+                   unit: byPack ? "paq." : "m²", total, unitPrice: r.price != null && byPack && r.packs ? r.price / r.packs : null,
+                   m2PerUnit: byPack ? r.m2Pack : 1 });
+    });
+    computeFixTotals(order, products, systems).rows.forEach(r => {
+      const byBox = r.boxes != null;
+      const total = byBox ? r.boxes : r.piecesWaste;
+      items.push({ key: `fix|${r.systemId}|${r.articleId}`, kind: "fix", label: r.name, productName: r.systemName, art: r.art,
+                   unit: byBox ? "boîte" : "pcs", total, unitPrice: r.price != null && total ? r.price / total : null,
+                   piecesPerUnit: byBox ? r.pack : 1 });
+    });
+    // Articles deja commandes qui ne sont plus dans le besoin (zone supprimee...) : on les montre quand meme
+    Object.keys(done).forEach(k => {
+      if (!items.some(it => it.key === k)) {
+        const [kind, , last] = k.split("|");
+        items.push({ key: k, kind, label: kind === "iso" ? `${last} mm` : last, productName: "", unit: "", total: 0, unitPrice: null });
+      }
+    });
+    items.forEach(it => {
+      it.ordered = done[it.key] || 0;
+      const remaining = Math.max(0, it.total - it.ordered);
+      const share = it.unit === "m²" ? Math.round(it.total * pct) / 100 : Math.ceil(it.total * pct / 100 - 1e-9);
+      it.now = Math.min(remaining, share);
+      it.after = Math.max(0, it.total - it.ordered - it.now);
+      it.over = it.ordered > it.total ? it.ordered - it.total : 0;   // trop commande (zones reduites depuis)
+      it.price = it.unitPrice != null ? it.now * it.unitPrice : null;
+    });
+    const number = (order.deliveries || []).length + 1;
+    const active = pct < 100 || number > 1;
+    const isBalance = number > 1 && items.every(it => it.after === 0);
+    return { pct, number, active, isBalance, items, nothingLeft: items.every(it => it.now === 0) };
+  }
+
+  // Enregistre la livraison proposee (a faire une fois la commande envoyee)
+  function recordDelivery(order, plan, date) {
+    const items = {};
+    plan.items.forEach(it => { if (it.now > 0) items[it.key] = it.now; });
+    order.deliveries = order.deliveries || [];
+    order.deliveries.push({ id: "d" + Date.now(), n: plan.number, date, pct: plan.pct, balance: plan.isBalance, items });
+    return order;
+  }
+
   // Texte court des fixations d'une zone (Excel, PDF) : "8x140 + U200"
   function lineFixLabel(line, products, systems, fix) {
     const r = lineFixations(line, products, systems, fix);
@@ -509,7 +571,7 @@
     return roles;
   }
 
-  const api = { DEFAULT_PRODUCTS, DEFAULT_FIX_SYSTEMS, defaultFix, allCombosMixed, layerProducts, isMixed, layersLabel, comboR, pickAnchor, pickSpiral, spiralSystemFor, lineFixations, computeFixTotals, lineFixLabel, fmt, fmt0, newOrder, migrate, allCombos, comboPrice, sortCombos, spread, comboLabel, evalSurface, computeTotals, mpText, frDate, zoneLabel, xlNum, typeFromDensity, naturalSort, etageRank, todayIso, parsePasted, parseNum, guessRoles };
+  const api = { DEFAULT_PRODUCTS, deliveryPlan, recordDelivery, DEFAULT_FIX_SYSTEMS, defaultFix, allCombosMixed, layerProducts, isMixed, layersLabel, comboR, pickAnchor, pickSpiral, spiralSystemFor, lineFixations, computeFixTotals, lineFixLabel, fmt, fmt0, newOrder, migrate, allCombos, comboPrice, sortCombos, spread, comboLabel, evalSurface, computeTotals, mpText, frDate, zoneLabel, xlNum, typeFromDensity, naturalSort, etageRank, todayIso, parsePasted, parseNum, guessRoles };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else Object.assign(root, api);
 })(typeof window !== "undefined" ? window : globalThis);

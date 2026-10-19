@@ -255,3 +255,62 @@ test("migration : fixations et format de plaque ajoutes aux anciennes donnees", 
   assert.equal(s.fixSystems.length, 3);
   assert.equal(s.products[0].plateArea, 0.75);
 });
+
+// ===== V11 : livraisons partielles =====
+function bigOrder(pct) {
+  return { waste: 5, fix: c.defaultFix(), deliveryPct: pct, deliveries: [],
+           lines: [{ id: "l1", productId: ISO.id, productName: ISO.name, layers: [120, 100], surface: 50 }] };
+}
+
+test("livraison : 100 % = tout, comme avant", () => {
+  const plan = c.deliveryPlan(bigOrder(100), [ISO], FIX);
+  assert.equal(plan.active, false);
+  const p120 = plan.items.find(i => i.key === `iso|${ISO.id}|120`);
+  assert.equal(p120.total, 24);
+  assert.equal(p120.now, 24);
+});
+
+test("livraison : 80 % puis solde automatique", () => {
+  const o = bigOrder(80);
+  const plan1 = c.deliveryPlan(o, [ISO], FIX);
+  assert.equal(plan1.active, true);
+  const k120 = `iso|${ISO.id}|120`;
+  assert.equal(plan1.items.find(i => i.key === k120).now, 20);   // 24 x 80 % = 19,2 -> 20 paquets
+  assert.equal(plan1.items.find(i => i.key === k120).after, 4);
+  const anchor = plan1.items.find(i => i.key === "fix|hft-etoile|8x140");
+  assert.equal(anchor.unit, "boîte");
+  assert.equal(anchor.total, 2);
+  assert.equal(anchor.now, 2);                                   // 2 x 80 % = 1,6 -> 2 boites
+  c.recordDelivery(o, plan1, "2026-10-19");
+  const plan2 = c.deliveryPlan(o, [ISO], FIX);
+  assert.equal(plan2.number, 2);
+  assert.equal(plan2.items.find(i => i.key === k120).ordered, 20);
+  assert.equal(plan2.items.find(i => i.key === k120).now, 4);    // le solde, pas 20
+  assert.equal(anchor.after, 0);
+  assert.equal(plan2.items.find(i => i.key === "fix|hft-etoile|8x140").now, 0);
+  assert.equal(plan2.isBalance, true);
+  c.recordDelivery(o, plan2, "2026-10-26");
+  assert.equal(c.deliveryPlan(o, [ISO], FIX).nothingLeft, true);
+});
+
+test("livraison : prix de la livraison au prorata des paquets", () => {
+  const plan = c.deliveryPlan(bigOrder(50), [ISO], FIX);
+  const p120 = plan.items.find(i => i.key === `iso|${ISO.id}|120`);
+  assert.equal(p120.now, 12);
+  assert.equal(Math.round(p120.price * 100) / 100, Math.round(12 * 2.25 * 33.7 * 100) / 100);
+});
+
+test("livraison : zone reduite apres coup -> trop commande signale, rien a proposer", () => {
+  const o = bigOrder(100);
+  c.recordDelivery(o, c.deliveryPlan(o, [ISO], FIX), "2026-10-19");
+  o.lines[0].surface = 20;
+  const p120 = c.deliveryPlan(o, [ISO], FIX).items.find(i => i.key === `iso|${ISO.id}|120`);
+  assert.equal(p120.now, 0);
+  assert.ok(p120.over > 0);
+});
+
+test("migration : livraisons ajoutees aux anciennes commandes", () => {
+  const s = c.migrate({ products: [{ id: ISO.id, name: ISO.name, thicknesses: [] }], orders: [{ id: "o1", name: "A", lines: [] }], currentOrderId: "o1" });
+  assert.equal(s.orders[0].deliveryPct, 100);
+  assert.deepEqual(s.orders[0].deliveries, []);
+});
