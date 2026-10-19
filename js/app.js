@@ -258,6 +258,7 @@ function renderOrderPicker() {
     `<option value="${o.id}" ${o.id === curOrder().id ? "selected" : ""}>${escapeHtml(o.name)} (${o.lines.length} zone${o.lines.length > 1 ? "s" : ""})</option>`
   ).join("");
   $("waste").value = curOrder().waste ?? 5;
+  $("deliveryPct").value = curOrder().deliveryPct ?? 100;
   renderFixSettings();
 }
 
@@ -325,7 +326,13 @@ function renderOrder() {
   $("orderActions").classList.toggle("hidden", !lines.length);
   $("orderSettings").classList.toggle("hidden", !lines.length);
   if (!lines.length) {
-    $("orderLines").innerHTML = `<p class="empty">Saisis une surface, puis touche « + Commande » sur une combinaison.</p>`;
+    $("orderLines").innerHTML = `<div class="hint" style="margin-top:0">
+      <b>Pour remplir la commande :</b>
+      <ol style="margin:6px 0 0; padding-left:20px">
+        <li>choisis l'épaisseur cible et regarde les combinaisons ;</li>
+        <li>saisis la <b>surface</b> (et si tu veux la façade et l'étage) ;</li>
+        <li>touche <b>« + Commande »</b> sur la combinaison retenue.</li>
+      </ol>Les réglages (chute, fixations, livraison) et les exports apparaissent ensuite ici.</div>`;
     $("orderSummary").innerHTML = "";
     return;
   }
@@ -361,8 +368,53 @@ function renderOrder() {
     ${total ? `<p class="hint">${escapeHtml(priceDateNote(rows))}</p>` : ""}
     ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}
     ${fixSummaryHtml()}
-    ${grandTotalHtml(total)}`;
+    ${grandTotalHtml(total)}
+    ${deliveryHtml()}`;
   renderExcelHint();
+}
+
+function plan() {
+  return deliveryPlan(curOrder(), state.products, state.fixSystems);
+}
+
+function qtyText(v, unit) {
+  if (!unit) return fmt0(v);
+  const plural = v > 1 && (unit === "boîte") ? "s" : "";
+  return `${fmt0(v)} ${unit}${plural}`;
+}
+
+function deliveryTitle(pl) {
+  return `Livraison ${pl.number}${pl.isBalance ? " (solde)" : pl.pct < 100 ? ` (${pl.pct} %)` : ""}`;
+}
+
+// Suivi des livraisons : historique, proposition pour la prochaine, bouton pour l'enregistrer
+function deliveryHtml() {
+  const o = curOrder(), pl = plan();
+  const hist = o.deliveries.map((d, i) => `<div><span>✓ Livraison ${d.n}${d.balance ? " (solde)" : d.pct < 100 ? ` (${d.pct} %)` : ""} · commandée le ${frDate(d.date)}</span>
+    ${i === o.deliveries.length - 1 ? `<button class="btn small ghost" id="undoDeliveryBtn">Annuler</button>` : ""}</div>`).join("");
+  if (!pl.active) {
+    return `<div class="row" style="justify-content:flex-end; margin-top:10px">
+      <button class="btn small" id="recordDeliveryBtn" title="Pour garder une trace de ce qui est parti chez le fournisseur">✓ Marquer comme commandée</button></div>`;
+  }
+  const over = pl.items.filter(it => it.over > 0);
+  const table = pl.nothingLeft ? `<p class="done-ok">Tout est commandé ✓</p>` : `<div class="table-wrap" style="margin-top:4px"><table>
+      <thead><tr><th>Article</th><th class="num">Total</th><th class="num">Déjà cdé</th><th class="num">Cette livraison</th><th class="num">Reste</th></tr></thead>
+      <tbody>${pl.items.filter(it => it.total > 0 || it.ordered > 0).map(it => `<tr>
+        <td>${escapeHtml(it.label)}<br><span class="meta">${escapeHtml(it.productName || "")}</span></td>
+        <td class="num">${fmt0(it.total)}</td>
+        <td class="num">${fmt0(it.ordered)}</td>
+        <td class="num now">${qtyText(it.now, it.unit)}</td>
+        <td class="num">${fmt0(it.after)}</td></tr>`).join("")}</tbody>
+    </table></div>`;
+  const price = pl.items.reduce((s, it) => s + (it.price || 0), 0);
+  return `<div class="delivery-box">
+    <h3>${pl.nothingLeft ? "Livraisons" : escapeHtml(deliveryTitle(pl))}</h3>
+    ${hist ? `<div class="delivery-hist">${hist}</div>` : ""}
+    ${table}
+    ${!pl.nothingLeft && price ? `<p class="hint">Cette livraison : ${fmt(price)} CHF HT (prix catalogue). Les exports (Excel, PDF, mail) reprennent ces quantités.</p>` : ""}
+    ${over.length ? `<div class="alert-box">⚠ Déjà trop commandé depuis la modification des zones : ${over.map(it => escapeHtml(`${it.label} (+${fmt0(it.over)} ${it.unit})`)).join(", ")}.</div>` : ""}
+    ${pl.nothingLeft ? "" : `<div class="row" style="justify-content:flex-end"><button class="btn primary small" id="recordDeliveryBtn">✓ Marquer la livraison ${pl.number} comme commandée</button></div>`}
+  </div>`;
 }
 
 function grandTotalHtml(isoTotal) {
@@ -374,6 +426,24 @@ function grandTotalHtml(isoTotal) {
 }
 
 function orderText() {
+  const pl = plan();
+  if (pl.active && !pl.nothingLeft) {
+    let t = `${curOrder().name} – ${deliveryTitle(pl)}\n\n`;
+    const block = (kind, title) => {
+      const its = pl.items.filter(it => it.kind === kind && it.now > 0);
+      if (!its.length) return;
+      t += title + "\n";
+      its.forEach(it => { t += `- ${it.productName ? it.productName + " " : ""}${it.label}${it.art ? " (" + it.art + ")" : ""} : ${qtyText(it.now, it.unit)}\n`; });
+      t += "\n";
+    };
+    block("iso", "Isolant");
+    block("fix", "Fixations");
+    t += "Détail par zone :\n";
+    curOrder().lines.forEach(l => { t += `- ${zoneLabel(l)} : ${fmt0(l.surface)} m², ${lineLabel(l)}\n`; });
+    const reste = pl.items.filter(it => it.after > 0);
+    t += reste.length ? `\n(Reste à commander ensuite : ${reste.map(it => `${it.label} ${qtyText(it.after, it.unit)}`).join(", ")})` : "\n(Solde : tout est commandé avec cette livraison)";
+    return t;
+  }
   const rows = orderTotals();
   const waste = Number(curOrder().waste) || 0;
   const products = [...new Set(rows.map(r => r.productName))];
@@ -454,7 +524,25 @@ function zonesClipboard(lines, withHeader) {
   return { html: xlTable(withHeader ? ZONE_HEADER : null, rows), text: tsv(withHeader ? ZONE_HEADER : null, values) };
 }
 
+// Mode livraison : le recap exporte les quantites de CETTE livraison
+function deliveryClipboard(pl) {
+  const header = ["Type", "Article", "Produit / système", "N° art.", "Unité", "Total", "Déjà commandé", "Cette livraison", "Reste après", "CHF HT"];
+  const values = pl.items.filter(it => it.now > 0).map(it => [it.kind === "iso" ? "Isolant" : "Fixation", it.label, it.productName || "",
+    it.art || "", it.unit, it.total, it.ordered, it.now, it.after, it.price != null ? Math.round(it.price * 100) / 100 : ""]);
+  const decs = [0, 0, 0, 0, 0, 0, 0, 0, 0, 2];
+  const rows = values.map(v => `<tr>${v.map((x, i) => xlCell(x, { dec: decs[i], fmt: decs[i] ? "0\\.00" : undefined })).join("")}</tr>`);
+  const total = pl.items.reduce((s, it) => s + (it.price || 0), 0);
+  const title = `${curOrder().name} – ${deliveryTitle(pl)}`;
+  const titleRow = `<tr><td colspan="${header.length}" style="${XL.tot}">${escapeHtml(title)}</td></tr>`;
+  const footer = total ? `<tr><td colspan="9" style="${XL.tot}">Total de la livraison (prix catalogue)</td>${xlCell(total, { style: XL.tot, dec: 2, fmt: "#,##0\\.00" })}</tr>` : "";
+  const html = xlTable(header, rows, footer).replace("<table style=", "<table data-x style=").replace(/(<table[^>]*>)/, `$1${titleRow}`);
+  const text = title + "\n" + tsv(header, values) + (total ? `\nTotal de la livraison\t\t\t\t\t\t\t\t\t${xlNum(total)}` : "");
+  return { html, text };
+}
+
 function recapClipboard() {
+  const pl = plan();
+  if (pl.active && !pl.nothingLeft) return deliveryClipboard(pl);
   const header = ["Produit", "Épaisseur (mm)", "m² nets", "m² + chute", "Paquets", "Multipacs", "m² commandés", "CHF/m² HT", "CHF HT"];
   const data = orderTotals();
   const values = data.map(r => {
@@ -619,11 +707,13 @@ $("results").addEventListener("click", e => {
 // openModal({ title, text, fields: [{ id, label, value, type, placeholder }], buttons: [{ label, value, primary, danger }] })
 // Renvoie une promesse : { button, values } ou null si on ferme.
 // validate(values) peut renvoyer un message d'erreur pour bloquer la validation.
-function openModal({ title, text = "", fields = [], buttons = [{ label: "OK", value: "ok", primary: true }], validate }) {
+function openModal({ title, text = "", html = "", fields = [], buttons = [{ label: "OK", value: "ok", primary: true }], validate }) {
   return new Promise(resolve => {
     $("modalTitle").textContent = title;
-    $("modalText").textContent = text;
-    $("modalText").classList.toggle("hidden", !text);
+    // html : contenu de confiance ecrit dans l'appli (guide, aides), jamais une saisie utilisateur
+    if (html) { $("modalText").innerHTML = html; $("modalText").className = "guide-body"; }
+    else { $("modalText").textContent = text; $("modalText").className = "hint"; }
+    $("modalText").classList.toggle("hidden", !text && !html);
     $("modalError").textContent = "";
     $("modalFields").innerHTML = fields.map(f => `
       <label>${escapeHtml(f.label)}
@@ -734,6 +824,27 @@ async function editLine(id) {
   renderOrder(); saveState();
 }
 
+$("deliveryPct").addEventListener("input", e => {
+  curOrder().deliveryPct = Math.min(100, Math.max(1, Number(e.target.value) || 100));
+  renderOrderSummaryOnly(); saveState();
+});
+$("orderSummary").addEventListener("click", async e => {
+  if (e.target.id === "recordDeliveryBtn") {
+    const pl = plan();
+    if (!await confirmModal(`Enregistrer la ${deliveryTitle(pl).toLowerCase()} ?`,
+      "À faire une fois la commande envoyée au fournisseur : ces quantités seront comptées comme « déjà commandées », et la prochaine fois l'appli proposera ce qui reste.",
+      "Enregistrer")) return;
+    recordDelivery(curOrder(), pl, todayIso());
+    renderOrder(); saveState();
+    toast(`Livraison ${pl.number} enregistrée`);
+  }
+  if (e.target.id === "undoDeliveryBtn") {
+    const d = curOrder().deliveries[curOrder().deliveries.length - 1];
+    if (!await confirmModal("Annuler cette livraison ?", `La livraison ${d.n} du ${frDate(d.date)} ne sera plus comptée comme commandée.`, "Annuler la livraison", true)) return;
+    curOrder().deliveries.pop();
+    renderOrder(); saveState();
+  }
+});
 $("waste").addEventListener("input", () => {
   curOrder().waste = Math.max(0, Number($("waste").value) || 0);
   renderOrder(); saveState();
@@ -1008,19 +1119,39 @@ function buildPrintView() {
     ? `<p class="pv-subtot"><b>⚠ Fixations à vérifier :</b> ${fix.alerts.map(a => escapeHtml(`${a.zone} : ${a.text}`)).join(" · ")}</p>` : "";
   const fixNotes = [...new Set(fix.rows.map(r => r.priceNote).filter(Boolean))].join(", ");
 
+  const pl = plan();
+  const deliv = pl.active && !pl.nothingLeft;
+  const delivTable = (kind, title) => {
+    const its = pl.items.filter(it => it.kind === kind && (it.total > 0 || it.ordered > 0));
+    if (!its.length) return "";
+    const sum = its.reduce((s, it) => s + (it.price || 0), 0);
+    return `<h2>${title}</h2><table>
+      <thead><tr><th>Article</th><th>${kind === "iso" ? "Produit" : "Système"}</th><th class="num">Total</th><th class="num">Déjà commandé</th><th class="num">Cette livraison</th><th class="num">Reste après</th>${sum ? '<th class="num">CHF HT</th>' : ""}</tr></thead>
+      <tbody>${its.map(it => `<tr>
+        <td>${escapeHtml(it.label)}${it.art ? `<br>${escapeHtml(it.art)}` : ""}</td><td>${escapeHtml(it.productName || "")}</td>
+        <td class="num">${fmt0(it.total)}</td><td class="num">${fmt0(it.ordered)}</td>
+        <td class="num"><b>${qtyText(it.now, it.unit)}</b></td><td class="num">${fmt0(it.after)}</td>
+        ${sum ? `<td class="num">${it.price != null ? fmt(it.price) : "—"}</td>` : ""}</tr>`).join("")}
+        ${sum ? `<tr class="pv-total"><td colspan="6">Sous-total</td><td class="num">${fmt(sum)}</td></tr>` : ""}
+      </tbody></table>`;
+  };
+  const delivSum = pl.items.reduce((s, it) => s + (it.price || 0), 0);
+  const delivHtml = deliv ? delivTable("iso", "À commander – isolant") + delivTable("fix", "À commander – fixations") + (fixOn ? fixAlertHtml : "")
+    + (delivSum ? `<p style="font-weight:700; margin-top:8px">Total de la livraison ${pl.number}, isolant + fixations : ${fmt(delivSum)} CHF HT</p>` : "") : "";
+
   $("printView").innerHTML = `
     <h1>Bon de commande – Isolation</h1>
-    <p class="pv-sub">${escapeHtml(o.name)}</p>
+    <p class="pv-sub">${escapeHtml(o.name)}${deliv ? " · " + escapeHtml(deliveryTitle(pl)) : ""}</p>
     <div class="pv-meta">
       <span><b>Date :</b> ${today}</span>
       <span><b>Produit :</b> ${escapeHtml(products.join(", "))}</span>
       <span><b>Zones :</b> ${o.lines.length}</span>
       <span><b>Chute :</b> ${waste} %</span>
     </div>
-    <h2>À commander${fixOn ? " – isolant" : ""}</h2>
+    ${deliv ? delivHtml : `<h2>À commander${fixOn ? " – isolant" : ""}</h2>
     ${recapHtml}
     ${fixOn ? `<h2>À commander – fixations</h2>${fixHtml}${fixAlertHtml}` : ""}
-    ${total && fixTotal ? `<p style="font-weight:700; margin-top:8px">Total estimé isolant + fixations : ${fmt(total + fixTotal)} CHF HT</p>` : ""}
+    ${total && fixTotal ? `<p style="font-weight:700; margin-top:8px">Total estimé isolant + fixations : ${fmt(total + fixTotal)} CHF HT</p>` : ""}`}
     <h2>Détail par façade et par étage</h2>
     ${facadeHtml}
     <p class="pv-foot">Quantités arrondies au paquet supérieur, chute de ${waste} % incluse.${total ? " " + escapeHtml(priceDateNote(rows).replace(/^./, c => c.toUpperCase())) + ", prix indicatifs." : ""}${fixNotes ? " Fixations : " + escapeHtml(fixNotes) + ", arrondies à la boîte supérieure." : ""} Établi avec Strate le ${today}.</p>`;
@@ -1031,7 +1162,8 @@ $("pdfBtn").addEventListener("click", () => {
   buildPrintView();
   // Le titre de la page devient le nom propose pour le fichier PDF
   const oldTitle = document.title;
-  document.title = `Commande isolation - ${curOrder().name} - ${todayIso()}`;
+  const pl = plan();
+  document.title = `Commande isolation - ${curOrder().name}${pl.active && !pl.nothingLeft ? " - livraison " + pl.number : ""} - ${todayIso()}`;
   const restore = () => { document.title = oldTitle; window.removeEventListener("afterprint", restore); };
   window.addEventListener("afterprint", restore);
   window.print();
@@ -1184,6 +1316,50 @@ $("resetFixBtn").addEventListener("click", async () => {
   fixSysId = null;
   renderFixCatalog(); afterFixEdit();
 });
+
+// ===== Aides "?" et guide de demarrage =====
+const HELP = {
+  tolerance: ["Tolérance", "Écart accepté autour de l'épaisseur cible. Exemple : cible 220, tolérance − 0 et + 10 → l'appli propose les combinaisons de 220 à 230 mm. Un isolant souple accepte un peu de « moins » (il se comprime), un rigide non."],
+  classement: ["Classement", "« Recommandé » : le moins de couches possible, puis l'épaisseur la plus juste, puis des couches équilibrées (120 + 100 plutôt que 180 + 40, plus facile à poser). « Le moins cher » : trié par prix au m² du catalogue."],
+  surface: ["Surface", "La surface de la zone à isoler, en m². Tu peux taper un calcul : 12,5*3,2 + 4*2,5 − 1,2*1,4 (panneaux additionnés, ouvertures retirées). Le résultat s'affiche sous le champ."],
+  mix: ["Mélanger 2 produits", "Pour une 1re couche (côté mur) dans un produit et les couches suivantes dans un autre, par ex. une laine souple contre le mur et une plaque semi-rigide avec voile à l'extérieur. Il faut au moins 2 produits dans le catalogue."],
+  chute: ["Chute", "Pourcentage ajouté aux quantités pour couvrir les coupes et la casse (isolant et fixations). Les quantités sont ensuite arrondies au paquet / à la boîte supérieure."],
+  delivery: ["Livraisons partielles", "Pour commander en plusieurs fois : 80 % = chaque livraison fait 80 % du total, sans dépasser ce qui reste. Après l'envoi, touche « Marquer la livraison comme commandée » : la fois suivante, l'appli propose automatiquement le solde. Les exports (Excel, PDF, mail) reprennent les quantités de la livraison en cours."],
+  fixations: ["Fixations", "1re couche (côté mur) : cheville choisie selon sa « fixation max » (la plus courte qui couvre l'épaisseur). Couches suivantes : spirale lue dans l'abaque du fournisseur ; « Auto » prend Drall-Fix si la 1re couche est semi-rigide/rigide, Drillfast si elle est souple. Quantité par plaque (surface de plaque dans le catalogue) ou par m². Si rien ne convient, une alerte s'affiche : l'appli ne devine pas."],
+  abaque: ["Abaque", "Chaque ligne dit : si la couche déjà posée fait entre « Base de » et « à » mm, et que la couche à fixer fait X mm, alors utiliser telle spirale. Recopie ici le tableau du fournisseur ; une combinaison absente déclenche une alerte."]
+};
+
+document.addEventListener("click", e => {
+  const h = e.target.closest(".help");
+  if (!h) return;
+  e.preventDefault(); e.stopPropagation();   // ne pas cocher la case ou ouvrir le bloc autour
+  const [title, text] = HELP[h.dataset.help] || ["Aide", ""];
+  openModal({ title, text, buttons: [{ label: "Compris", value: "ok", primary: true }] });
+}, true);
+
+const GUIDE = [
+  ["Bienvenue dans Strate", `<p>Strate trouve <b>quelles épaisseurs d'isolant empiler</b> pour atteindre l'épaisseur dessinée, puis prépare la <b>commande</b> (paquets, fixations, prix).</p><p>3 étapes, 1 minute.</p>`],
+  ["1. Trouver la combinaison", `<ol><li>Choisis le <b>produit</b> (ou 2 produits à mélanger).</li><li>Tape l'<b>épaisseur cible</b> et la tolérance.</li><li>Les combinaisons s'affichent, la <b>recommandée</b> en vert. L'onglet « Épaisseur la plus proche » dit ce qui est réalisable autour de ta cote.</li></ol>`],
+  ["2. Remplir la commande", `<ol><li>Saisis la <b>surface</b> (un calcul est accepté), la <b>façade</b> et l'<b>étage</b>.</li><li>Touche <b>« + Commande »</b> sur la combinaison choisie.</li><li>Recommence pour chaque zone : façade et étage restent remplis.</li></ol><p>Touche une zone pour la corriger.</p>`],
+  ["3. Régler et envoyer", `<ul><li><b>Réglages</b> : chute, fixations, livraison en plusieurs fois.</li><li><b>Exports</b> : copie pour Excel (au fil de la tâche), récap, <b>bon de commande PDF</b> classé par façade et étage, texte pour mail.</li><li><b>Sauvegarde</b> régulièrement (en bas) : tes données ne vivent que dans ce navigateur.</li></ul><p>Les <b>?</b> à côté des réglages expliquent chaque option. Ce guide reste accessible avec le bouton « ? Guide ».</p>`]
+];
+
+async function showGuide() {
+  for (let i = 0; i < GUIDE.length; i++) {
+    const last = i === GUIDE.length - 1;
+    const r = await openModal({
+      title: GUIDE[i][0],
+      html: `<div class="guide-step">Étape ${i + 1} / ${GUIDE.length}</div>${GUIDE[i][1]}`,
+      buttons: [
+        ...(last ? [] : [{ label: "Passer", value: "skip", ghost: true }]),
+        { label: last ? "C'est parti" : "Suivant", value: "next", primary: true }
+      ]
+    });
+    if (!r || r.button === "skip") break;
+  }
+  try { localStorage.setItem("strate.guideSeen", "1"); } catch (e) {}
+}
+$("guideBtn").addEventListener("click", showGuide);
 
 // ===== Theme clair / sombre =====
 // "Auto" suit le reglage du systeme ; Clair et Sombre le forcent.
@@ -1428,6 +1604,8 @@ function restoreInputs() {
 
 restoreInputs();
 renderFixCatalog();
+// Premiere ouverture : guide de demarrage
+try { if (!localStorage.getItem("strate.guideSeen")) setTimeout(showGuide, 400); } catch (e) {}
 renderProductPicker();
 renderCatalog();
 renderOrder();

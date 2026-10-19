@@ -15,6 +15,7 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **V8** : choix du produit à modifier directement dans le catalogue, masse volumique (kg/m³) avec type déduit automatiquement.
 - **V9** : code découpé en fichiers + tests automatiques (aucun changement visible).
 - **V10** : mélange de 2 produits (1re couche côté mur + couches suivantes) ; fixations : chevilles HFT (1re couche, choisies selon la fixation max) et spirales Drall-Fix / Drillfast (couches suivantes, selon l'abaque), en pièces et boîtes, avec alerte si aucune ne convient ; catalogue des fixations modifiable.
+- **V11** : livraisons en plusieurs fois (X % du total, solde proposé automatiquement, historique, exports de la livraison en cours), guide de démarrage et aides « ? ».
 - Le catalogue (m²/paquet et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
 ## Organisation du code

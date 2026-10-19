@@ -9,13 +9,14 @@
   try { const t = localStorage.getItem("strate.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
 <meta name="description" content="Combinaisons d'epaisseurs d'isolation et commande">
-<link rel="stylesheet" href="styles.css?v=10.1">
+<link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
 <header>
   <h1>Strate</h1>
   <p>Combinaisons d'épaisseurs d'isolation</p>
-  <button class="btn small" id="themeBtn" style="margin-left:auto" title="Changer de thème"></button>
+  <button class="btn small" id="guideBtn" style="margin-left:auto" title="Comment ça marche ?">? Guide</button>
+  <button class="btn small" id="themeBtn" title="Changer de thème"></button>
 </header>
 
 <main>
@@ -26,7 +27,10 @@
       <select id="productSelect"></select>
     </label>
     <div class="product-name" id="productInfo"></div>
-    <label class="check-row"><input type="checkbox" id="mixToggle"> Mélanger 2 produits (1re couche côté mur + couches suivantes)</label>
+    <div class="row" style="margin-top:12px; gap:4px">
+      <label class="check-row" style="margin-top:0"><input type="checkbox" id="mixToggle"> Mélanger 2 produits (1re couche côté mur + couches suivantes)</label>
+      <button class="help" data-help="mix" aria-label="Aide">?</button>
+    </div>
     <div id="mixRow" class="hidden">
       <label>Couches suivantes
         <select id="productSelectB"></select>
@@ -50,13 +54,13 @@
           <option value="3">3</option>
         </select>
       </label>
-      <label class="combo-only">Tolérance − (mm)
+      <label class="combo-only"><span class="lbl">Tolérance − (mm) <button class="help" data-help="tolerance" aria-label="Aide">?</button></span>
         <input id="tolMinus" type="number" min="0" value="0" inputmode="numeric">
       </label>
       <label class="combo-only">Tolérance + (mm)
         <input id="tolPlus" type="number" min="0" value="10" inputmode="numeric">
       </label>
-      <label class="combo-only">Classement
+      <label class="combo-only"><span class="lbl">Classement <button class="help" data-help="classement" aria-label="Aide">?</button></span>
         <select id="sortMode">
           <option value="reco">Recommandé</option>
           <option value="price">Le moins cher</option>
@@ -71,7 +75,7 @@
     <h2 id="resultsTitle">Résultats</h2>
     <div class="results-meta" id="resultsMeta"></div>
     <div class="grid" style="margin-bottom:12px">
-      <label>Surface à isoler (m²)
+      <label><span class="lbl">Surface à isoler (m²) <button class="help" data-help="surface" aria-label="Aide">?</button></span>
         <input id="surface" type="text" placeholder="ex. 42,5 ou 12,5*3,2+8" inputmode="decimal" autocomplete="off">
         <span class="meta" id="surfaceCalc"></span>
       </label>
@@ -207,7 +211,7 @@
     </div>
     <div class="row"><button class="btn small" id="addFixArticleBtn">+ Article</button></div>
     <div id="fixRulesBox">
-      <h3>Abaque : quelle spirale pour quelle épaisseur ?</h3>
+      <h3>Abaque : quelle spirale pour quelle épaisseur ? <button class="help" data-help="abaque" aria-label="Aide">?</button></h3>
       <p class="hint" style="margin-top:0">« Base » = épaisseur déjà posée (1re couche). « Couche à fixer » = épaisseur de la couche suivante. Si aucune ligne ne correspond, l'appli affiche une alerte au lieu de deviner.</p>
       <div class="table-wrap" style="margin-top:4px">
         <table>
@@ -248,8 +252,16 @@
       <div class="settings-head">
         <label class="inline-field">Chute
           <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric"> %
+          <button class="help" data-help="chute" aria-label="Aide">?</button>
         </label>
-        <label class="check-row" style="margin-top:0"><input type="checkbox" id="fixOn"> Calculer les fixations</label>
+        <label class="inline-field">Livraison
+          <input id="deliveryPct" type="number" min="1" max="100" value="100" inputmode="numeric"> % du total
+          <button class="help" data-help="delivery" aria-label="Aide">?</button>
+        </label>
+        <span class="row" style="margin:0; gap:4px">
+          <label class="check-row" style="margin-top:0"><input type="checkbox" id="fixOn"> Calculer les fixations</label>
+          <button class="help" data-help="fixations" aria-label="Aide">?</button>
+        </span>
       </div>
       <div id="fixSettings">
         <div class="fix-line">
@@ -284,7 +296,7 @@
   </div>
 </main>
 
-<footer>Strate · V10.1</footer>
+<footer>Strate · V11</footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -300,7 +312,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=10.1"></script>
-<script src="js/app.js?v=10.1"></script>
+<script src="js/core.js?v=11"></script>
+<script src="js/app.js?v=11"></script>
 </body>
 </html>
