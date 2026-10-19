@@ -105,20 +105,16 @@ function productInfoText(p) {
   return `${p.name} · ${p.type || ""}${p.density ? ` (${p.density} kg/m³)` : ""}${p.lambda ? ` · λ ${fmt(p.lambda, 3)}` : ""} · ${on.length ? on.join(", ") + " mm" : "aucune épaisseur active"}`;
 }
 
-function layerColors(layers) {
-  // Une couleur par epaisseur differente pour bien distinguer les couches
-  const palette = ["var(--layer-a)", "var(--layer-b)", "var(--layer-c)"];
-  const distinct = [...new Set(layers)];
-  return layers.map(t => palette[distinct.indexOf(t) % palette.length]);
-}
-
-function stackHtml(layers, prods) {
+// Coupe dessinee : mur a gauche, puis chaque couche (largeur = epaisseur).
+// Laine = boucles, panneau rigide = quadrillage, comme sur les plans ; 2e produit = teinte plus claire.
+function stackHtml(layers, prods, mini = false) {
   const total = layers.reduce((a, b) => a + b, 0);
-  // Melange : une couleur par produit ; sinon une couleur par epaisseur
-  const palette = ["var(--layer-a)", "var(--layer-c)"];
-  const colors = isMixed(prods) ? prods.map(id => palette[id === prods[0] ? 0 : 1]) : layerColors(layers);
-  return `<div class="stack">${layers.map((t, i) =>
-    `<div style="width:${(t / total) * 100}%;background:${colors[i]}">${t}</div>`
+  const cls = i => {
+    const p = productById(prods[i]);
+    return [p && p.type === "rigide" ? "rigid" : "", isMixed(prods) && prods[i] !== prods[0] ? "alt" : ""].join(" ").trim();
+  };
+  return `<div class="stack${mini ? " mini" : ""}" aria-hidden="true">${layers.map((t, i) =>
+    `<div class="${cls(i)}" style="width:${(t / total) * 100}%"><span>${t}</span></div>`
   ).join("")}</div>`;
 }
 
@@ -134,23 +130,33 @@ function diffLabel(total, target) {
   return d > 0 ? `+${d} mm` : `${d} mm`;
 }
 
-function addButton(c) {
-  return `<button class="btn small" data-add="${c.layers.join(",")}" data-prods="${c.prods.join(",")}">+ Commande</button>`;
+function addButton(c, primary = false) {
+  return `<button class="btn small${primary ? " primary" : ""}" data-add="${c.layers.join(",")}" data-prods="${c.prods.join(",")}">+ Commande</button>`;
 }
 
 function priceTag(c) {
-  return c.price != null ? `<span class="price-tag">${fmt(c.price)} CHF/m²</span>` : "";
+  return c.price != null ? `<span class="price-tag">${fmt(c.price)} <span class="meta">CHF/m²</span></span>` : "";
 }
 
 function comboCard(c, target, best, showR, badge = "Recommandée") {
   const r = showR ? rText(c) : "";
-  return `<div class="combo ${best ? "best" : ""}">
-    <div class="combo-head">
-      <span class="combo-title">${escapeHtml(layersLabel(c.layers, c.prods, state.products))}${best ? `<span class="badge">${badge}</span>` : ""}</span>
-      <span class="row" style="margin:0">${priceTag(c)}${addButton(c)}</span>
-    </div>
-    <span class="meta">${c.total} mm · ${diffLabel(c.total, target)} · ${c.layers.length} couche${c.layers.length > 1 ? "s" : ""}${r ? " · " + r : ""}</span>
-    ${stackHtml(c.layers, c.prods)}
+  const title = escapeHtml(layersLabel(c.layers, c.prods, state.products));
+  if (best) {
+    return `<div class="combo best">
+      <div class="combo-head">
+        <div><span class="badge">${badge}</span><span class="combo-title">${title}</span></div>
+        <span class="row" style="margin:0; gap:14px">${priceTag(c)}${addButton(c, true)}</span>
+      </div>
+      <span class="meta">${c.total} mm, ${diffLabel(c.total, target)}, ${c.layers.length} couche${c.layers.length > 1 ? "s" : ""}${r ? ", " + r : ""}</span>
+      ${stackHtml(c.layers, c.prods)}
+    </div>`;
+  }
+  return `<div class="combo line">
+    <span class="combo-title">${title}</span>
+    <span class="meta">${diffLabel(c.total, target)}${r ? ", " + r : ""}</span>
+    ${stackHtml(c.layers, c.prods, true)}
+    ${priceTag(c) || "<span></span>"}
+    ${addButton(c)}
   </div>`;
 }
 
@@ -208,7 +214,7 @@ function nearestHtml(combos, target) {
   const above = sortCombos(combos.filter(c => c.total >= target), target)
     .sort((a, b) => a.total - b.total || a.layers.length - b.layers.length)[0];
   const block = (c, label) => c
-    ? `<div class="combo ${c.total === target ? "best" : ""}">
+    ? `<div class="combo${c.total === target ? " hit" : ""}">
          <div class="combo-head"><span class="meta">${label}</span><span class="row" style="margin:0">${priceTag(c)}${addButton(c)}</span></div>
          <span class="big">${c.total} mm</span>
          <span class="meta">${escapeHtml(layersLabel(c.layers, c.prods, state.products))} · ${diffLabel(c.total, target)}${rText(c) ? " · " + rText(c) : ""}</span>
@@ -260,6 +266,8 @@ function renderOrderPicker() {
   $("waste").value = curOrder().waste ?? 5;
   $("deliveryPct").value = curOrder().deliveryPct ?? 100;
   renderFixSettings();
+  const o = curOrder();
+  $("settingsSummary").textContent = `chute ${o.waste ?? 5} %${o.fix.on ? ", fixations" : ""}${(o.deliveryPct ?? 100) < 100 ? `, livraison ${o.deliveryPct} %` : ""}`;
 }
 
 function lineLabel(l) {
@@ -281,14 +289,18 @@ function renderFixSettings() {
   $("spiralSystem").innerHTML = `<option value="auto" ${f.spiralSystem === "auto" ? "selected" : ""}>Auto (selon la 1re couche)</option>` + opts("spirale", f.spiralSystem);
 }
 
+let fixFoldOpen = false;
 function fixSummaryHtml() {
   const f = curOrder().fix;
   if (!f.on) return "";
   const { rows, alerts } = fixTotals();
   const total = rows.reduce((s, r) => s + (r.price || 0), 0);
-  const notes = [...new Set(rows.map(r => r.priceNote).filter(Boolean))].join(" · ");
+  const notes = [...new Set(rows.map(r => r.priceNote).filter(Boolean))].join(", ");
+  const short = rows.map(r => `${r.name}${r.boxes != null ? ` (${r.boxes} bte${r.boxes > 1 ? "s" : ""})` : ""}`).join(", ");
+  // Replie par defaut : la ligne de resume suffit dans la plupart des cas
   return `
-    <h3>Fixations</h3>
+    <details class="fold" id="fixFold" ${fixFoldOpen ? "open" : ""}>
+    <summary>Fixations <span class="meta">${escapeHtml(short || "aucune")}${total ? ` · ${fmt(total)}` : ""}</span></summary>
     ${rows.length ? `<div class="table-wrap" style="margin-top:4px">
       <table>
         <thead><tr><th>Article</th><th class="num">Pièces</th><th class="num">Boîtes</th><th class="num">CHF HT</th></tr></thead>
@@ -302,6 +314,7 @@ function fixSummaryHtml() {
       </table></div>` : ""}
     ${notes ? `<p class="hint">${escapeHtml(notes.replace(/^./, c => c.toUpperCase()))} · pièces arrondies à la boîte supérieure.</p>` : ""}
     ${rows.some(r => r.price == null || r.boxes == null) ? `<p class="hint">« — » : prix ou conditionnement manquant dans le catalogue Fixations.</p>` : ""}
+    </details>
     ${alerts.length ? `<div class="alert-box"><b>⚠ Fixations à vérifier</b><ul>${alerts.map(a =>
       `<li>${escapeHtml(a.zone)} : ${escapeHtml(a.text)}</li>`).join("")}</ul>
       Complète le catalogue Fixations ou change de système : l'appli ne devine pas.</div>` : ""}`;
@@ -348,8 +361,14 @@ function renderOrder() {
   const rows = orderTotals();
   const total = rows.reduce((s, r) => s + (r.price || 0), 0);
   const multiProduct = new Set(rows.map(r => r.productId)).size > 1;
+  const fixOn = curOrder().fix.on;
+  const fixTot = fixOn ? fixTotals().rows.reduce((s, r) => s + (r.price || 0), 0) : 0;
   $("orderSummary").innerHTML = `
-    <h3>À commander</h3>
+    ${total ? `<div class="totals">
+      <span class="total-big">${fmt(total + fixTot)} <small>CHF HT</small></span>
+      <span class="meta">${fixTot ? `isolant ${fmt(total)} + fixations ${fmt(fixTot)}` : "prix catalogue"}</span>
+    </div>` : ""}
+    <h3>Isolant à commander</h3>
     <div class="table-wrap" style="margin-top:4px">
       <table>
         <thead><tr><th>Épaisseur</th><th class="num">m² + chute</th><th class="num">Paquets</th><th class="num">m² cdés</th><th class="num">CHF HT</th></tr></thead>
@@ -362,13 +381,12 @@ function renderOrder() {
             <td class="num">${r.price != null ? fmt(r.price) : "—"}</td>
           </tr>`).join("")}
         </tbody>
-        ${total ? `<tfoot><tr><td colspan="4">Total estimé (prix catalogue)</td><td class="num">${fmt(total)}</td></tr></tfoot>` : ""}
+        ${total ? `<tfoot><tr><td colspan="4">Sous-total isolant</td><td class="num">${fmt(total)}</td></tr></tfoot>` : ""}
       </table>
     </div>
-    ${total ? `<p class="hint">${escapeHtml(priceDateNote(rows))}</p>` : ""}
+    ${total ? `<p class="hint">${escapeHtml(priceDateNote(rows).replace(/^./, c => c.toUpperCase()))}.</p>` : ""}
     ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}
     ${fixSummaryHtml()}
-    ${grandTotalHtml(total)}
     ${deliveryHtml()}`;
   renderExcelHint();
 }
@@ -415,14 +433,6 @@ function deliveryHtml() {
     ${over.length ? `<div class="alert-box">⚠ Déjà trop commandé depuis la modification des zones : ${over.map(it => escapeHtml(`${it.label} (+${fmt0(it.over)} ${it.unit})`)).join(", ")}.</div>` : ""}
     ${pl.nothingLeft ? "" : `<div class="row" style="justify-content:flex-end"><button class="btn primary small" id="recordDeliveryBtn">✓ Marquer la livraison ${pl.number} comme commandée</button></div>`}
   </div>`;
-}
-
-function grandTotalHtml(isoTotal) {
-  if (!curOrder().fix.on) return "";
-  const fixTotal = fixTotals().rows.reduce((s, r) => s + (r.price || 0), 0);
-  if (!isoTotal || !fixTotal) return "";
-  return `<p style="margin:12px 0 0; font-weight:600; display:flex; justify-content:space-between">
-    <span>Total isolant + fixations</span><span>${fmt(isoTotal + fixTotal)} CHF HT</span></p>`;
 }
 
 function orderText() {
@@ -480,9 +490,9 @@ function orderText() {
 // x:num donne a Excel la vraie valeur numerique, quel que soit le separateur decimal
 // du PC (virgule en France, point sur certains PC suisses).
 const XL = {
-  th: "background:#C2410C;color:#FFFFFF;font-weight:bold;border:.5pt solid #7F7F7F;padding:3px 6px;",
+  th: "background:#1D2226;color:#FFFFFF;font-weight:bold;border:.5pt solid #7F7F7F;padding:3px 6px;",
   td: "border:.5pt solid #BFBFBF;padding:3px 6px;",
-  tot: "font-weight:bold;background:#FBE7DC;border:.5pt solid #7F7F7F;padding:3px 6px;"
+  tot: "font-weight:bold;background:#F5E5B8;border:.5pt solid #7F7F7F;padding:3px 6px;"
 };
 
 function xlCell(v, opts = {}) {
@@ -828,6 +838,8 @@ $("deliveryPct").addEventListener("input", e => {
   curOrder().deliveryPct = Math.min(100, Math.max(1, Number(e.target.value) || 100));
   renderOrderSummaryOnly(); saveState();
 });
+// On retient si le detail des fixations est ouvert (le recap est redessine souvent)
+$("orderSummary").addEventListener("toggle", e => { if (e.target.id === "fixFold") fixFoldOpen = e.target.open; }, true);
 $("orderSummary").addEventListener("click", async e => {
   if (e.target.id === "recordDeliveryBtn") {
     const pl = plan();
@@ -1364,9 +1376,9 @@ $("guideBtn").addEventListener("click", showGuide);
 // ===== Theme clair / sombre =====
 // "Auto" suit le reglage du systeme ; Clair et Sombre le forcent.
 const THEMES = [
-  { key: "auto", label: "◐ Auto" },
-  { key: "light", label: "☀ Clair" },
-  { key: "dark", label: "☾ Sombre" }
+  { key: "auto", label: "Thème : auto" },
+  { key: "light", label: "Thème : clair" },
+  { key: "dark", label: "Thème : sombre" }
 ];
 function currentTheme() {
   try { return localStorage.getItem("strate.theme") || "auto"; } catch (e) { return document.documentElement.dataset.theme || "auto"; }
