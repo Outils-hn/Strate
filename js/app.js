@@ -102,7 +102,9 @@ function renderProductPicker() {
 
 function productInfoText(p) {
   const on = p.thicknesses.filter(x => x.on).map(x => x.t).sort((a, b) => a - b);
-  return `${p.name} · ${p.type || ""}${p.density ? ` (${p.density} kg/m³)` : ""}${p.lambda ? ` · λ ${fmt(p.lambda, 3)}` : ""} · ${on.length ? on.join(", ") + " mm" : "aucune épaisseur active"}`;
+  const parts = [p.type, p.density ? `${p.density} kg/m³` : "", p.lambda ? `λ ${fmt(p.lambda, 3)}` : "",
+    on.length ? `${on.length} épaisseur${on.length > 1 ? "s" : ""}${on.length > 1 ? ` de ${on[0]} à ${on[on.length - 1]} mm` : ` : ${on[0]} mm`}` : "aucune épaisseur active"];
+  return parts.filter(Boolean).join(", ").replace(/^./, c => c.toUpperCase());
 }
 
 // Coupe dessinee : mur a gauche, puis chaque couche (largeur = epaisseur).
@@ -410,10 +412,8 @@ function deliveryHtml() {
   const o = curOrder(), pl = plan();
   const hist = o.deliveries.map((d, i) => `<div><span>✓ Livraison ${d.n}${d.balance ? " (solde)" : d.pct < 100 ? ` (${d.pct} %)` : ""} · commandée le ${frDate(d.date)}</span>
     ${i === o.deliveries.length - 1 ? `<button class="btn small ghost" id="undoDeliveryBtn">Annuler</button>` : ""}</div>`).join("");
-  if (!pl.active) {
-    return `<div class="row" style="justify-content:flex-end; margin-top:10px">
-      <button class="btn small" id="recordDeliveryBtn" title="Pour garder une trace de ce qui est parti chez le fournisseur">✓ Marquer comme commandée</button></div>`;
-  }
+  $("markOrderedBtn").classList.toggle("hidden", pl.active);
+  if (!pl.active) return "";
   const over = pl.items.filter(it => it.over > 0);
   const table = pl.nothingLeft ? `<p class="done-ok">Tout est commandé ✓</p>` : `<div class="table-wrap" style="margin-top:4px"><table>
       <thead><tr><th>Article</th><th class="num">Total</th><th class="num">Déjà cdé</th><th class="num">Cette livraison</th><th class="num">Reste</th></tr></thead>
@@ -840,15 +840,21 @@ $("deliveryPct").addEventListener("input", e => {
 });
 // On retient si le detail des fixations est ouvert (le recap est redessine souvent)
 $("orderSummary").addEventListener("toggle", e => { if (e.target.id === "fixFold") fixFoldOpen = e.target.open; }, true);
+$("markOrderedBtn").addEventListener("click", () => recordCurrentDelivery());
+// Enregistre la livraison en cours (bouton des exports ou du bloc Livraison)
+async function recordCurrentDelivery() {
+  const pl = plan();
+  if (!await confirmModal(`Enregistrer la ${deliveryTitle(pl).toLowerCase()} ?`,
+    "À faire une fois la commande envoyée au fournisseur : ces quantités seront comptées comme « déjà commandées », et la prochaine fois l'appli proposera ce qui reste.",
+    "Enregistrer")) return;
+  recordDelivery(curOrder(), pl, todayIso());
+  renderOrder(); saveState();
+  toast(`Livraison ${pl.number} enregistrée`);
+}
 $("orderSummary").addEventListener("click", async e => {
   if (e.target.id === "recordDeliveryBtn") {
-    const pl = plan();
-    if (!await confirmModal(`Enregistrer la ${deliveryTitle(pl).toLowerCase()} ?`,
-      "À faire une fois la commande envoyée au fournisseur : ces quantités seront comptées comme « déjà commandées », et la prochaine fois l'appli proposera ce qui reste.",
-      "Enregistrer")) return;
-    recordDelivery(curOrder(), pl, todayIso());
-    renderOrder(); saveState();
-    toast(`Livraison ${pl.number} enregistrée`);
+    await recordCurrentDelivery();
+    return;
   }
   if (e.target.id === "undoDeliveryBtn") {
     const d = curOrder().deliveries[curOrder().deliveries.length - 1];
@@ -1273,12 +1279,12 @@ async function exportPdf() {
 
   try {
     walk(view);
-    // Pied de page : signature et numero de page
+    // Pied de page : nom de l'appli et numero de page (pas de nom de personne sur le bon)
     const n = doc.getNumberOfPages();
     for (let i = 1; i <= n; i++) {
       doc.setPage(i);
       doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GREY);
-      doc.text(pdfText("Strate · Hugo N."), M, 297 - 8);
+      doc.text("Strate", M, 297 - 8);
       doc.text(`Page ${i} / ${n}`, 210 - M, 297 - 8, { align: "right" });
     }
     doc.save(pdfFileName());
