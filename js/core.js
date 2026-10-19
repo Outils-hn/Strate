@@ -16,6 +16,7 @@
       type: "semi-rigide",
       lambda: 0.031,
       density: 40,
+      plateArea: 0.75,   // plaque 60 x 125 cm
       packsPerMP: 12,
       priceDate: "2026-10-18",
       thicknesses: [
@@ -32,13 +33,81 @@
     }
   ];
 
+  // ===== Fixations par defaut : catalogue HFT 09/2026 =====
+  // Chevilles (1re couche, cote mur) : on prend la plus courte dont la
+  // "fixation max" (epaisseur d'isolant maxi) couvre la couche.
+  // Spirales (couches suivantes) : tableau du fournisseur
+  // (epaisseur deja posee = base, epaisseur de la couche a fixer = add).
+  const art = (id, artNo, max, price100, pack) => ({ id, name: id, art: artNo, max, price100, pack });
+  const DEFAULT_FIX_SYSTEMS = [
+    {
+      id: "hft-etoile", name: "HFT Étoile d'isolation (1 et 2 pièces)", kind: "cheville",
+      priceNote: "prix nets HFT 09/2026",
+      articles: [
+        art("8x60", "A038060", 40, 7.00, 250), art("8x80", "A038080", 60, 8.50, 250),
+        art("8x100", "A038100", 80, 10.50, 250), art("8x120", "A038120", 100, 12.00, 250),
+        art("8x140", "A038140", 120, 13.50, 200), art("8x160", "A038160", 140, 14.50, 200),
+        art("8x180", "231508180", 150, 13.50, 250), art("8x200", "231508200", 170, 14.00, 250),
+        art("8x220", "231508220", 190, 15.50, 250), art("8x240", "231508240", 210, 17.50, 250),
+        art("8x260", "231508260", 230, 20.50, 250), art("8x280", "231508280", 250, 25.50, 250),
+        art("8x300", "231508300", 270, 27.50, 250)
+      ]
+    },
+    {
+      // Pour une isolation de base plutot dure (semi-rigide, rigide)
+      id: "hft-drallfix", name: "HFT Drall-Fix type U (spirale, base dure)", kind: "spirale", hardness: "dur",
+      priceNote: "prix bruts HFT 09/2026",
+      articles: [
+        art("U80", "", null, null, null),  // cite dans l'abaque mais absent de la liste de prix
+        art("U100", "VS000010", null, 46.00, 500), art("U120", "VS000012", null, 49.00, 250),
+        art("U140", "VS000014", null, 54.50, 250), art("U160", "VS000016", null, 71.50, 500),
+        art("U180", "VS000018", null, 90.00, 500), art("U200", "VS000020", null, 107.00, 250),
+        art("U220", "VS000022", null, 126.50, 250), art("U240", "VS000024", null, 143.50, 250),
+        art("U260", "VS000026", null, 161.00, 250), art("U280", "VS000028", null, 190.00, 250),
+        art("U300", "VS000030", null, 198.00, 250), art("U320", "VS000032", null, 238.00, 250),
+        art("U340", "VS000034", null, 267.00, 250)
+      ],
+      // Abaque Drall-Fix. Quand l'abaque donne deux types pour une meme epaisseur,
+      // on a retenu le plus long (meilleur ancrage, mini 60 mm dans la base).
+      rules: [
+        [80, 80, 20, "U80"], [80, 80, 30, "U100"], [80, 80, 40, "U100"],
+        [100, 100, 20, "U80"], [100, 100, 30, "U100"], [100, 100, 40, "U120"], [100, 100, 50, "U140"],
+        [100, 100, 60, "U140"], [100, 100, 80, "U160"], [100, 100, 100, "U180"],
+        [120, 160, 30, "U100"], [120, 160, 40, "U120"], [120, 160, 50, "U140"], [120, 160, 60, "U140"],
+        [120, 160, 80, "U160"], [120, 160, 100, "U200"], [120, 160, 120, "U220"]
+      ].map(([baseMin, baseMax, add, article]) => ({ baseMin, baseMax, add, article }))
+    },
+    {
+      // Pour une isolation de base plutot molle (souple)
+      id: "hft-drillfast", name: "HFT Drillfast type N (spirale, base souple)", kind: "spirale", hardness: "souple",
+      priceNote: "prix bruts HFT 09/2026",
+      articles: [
+        art("N75", "VS000075", null, 31.50, 250), art("N100", "VS000100", null, 46.00, 200),
+        art("N125", "VS000125", null, 47.00, 200), art("N150", "VS000150", null, 60.50, 150),
+        art("N175", "VS000175", null, 69.00, 100), art("N200", "VS000200", null, 75.50, 100),
+        art("N225", "VS000225", null, 84.00, 100), art("N250", "VS000250", null, 90.00, 100)
+      ],
+      // Valeurs directives Drillfast
+      rules: [
+        [100, 30, "N75"], [100, 40, "N100"], [100, 50, "N125"], [100, 60, "N125"], [100, 80, "N150"],
+        [120, 80, "N175"], [120, 100, "N200"], [140, 100, "N225"], [140, 120, "N250"]
+      ].map(([base, add, article]) => ({ baseMin: base, baseMax: base, add, article }))
+    }
+  ];
+
+  // Reglages de fixation d'une commande (modifiables dans l'appli)
+  function defaultFix() {
+    return { on: true, anchorSystem: "hft-etoile", anchorQty: 5, anchorUnit: "plaque",
+             spiralSystem: "auto", spiralQty: 5, spiralUnit: "plaque" };
+  }
+
   // Format francais : 7,10 au lieu de 7.10
   const fmt = (v, d = 2) => Number(v).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
 
   const fmt0 = v => Number(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 });
 
   function newOrder(name) {
-    return { id: "o" + Date.now() + Math.floor(Math.random() * 1000), name, lines: [], waste: 5 };
+    return { id: "o" + Date.now() + Math.floor(Math.random() * 1000), name, lines: [], waste: 5, fix: defaultFix() };
   }
 
   // Les catalogues sauves par la V1 n'ont pas les m2/paquet ni les prix :
@@ -57,11 +126,17 @@
     if (!s.orders.some(o => o.id === s.currentOrderId)) s.currentOrderId = s.orders[0].id;
     // V2 : un seul champ "repere" -> devient la facade en V3
     s.orders.forEach(o => o.lines.forEach(l => { if (l.repere && !l.facade) { l.facade = l.repere; delete l.repere; } }));
+    // V10 : fixations
+    s.orders.forEach(o => { o.fix = Object.assign(defaultFix(), o.fix || {}); });
+    if (!Array.isArray(s.fixSystems)) s.fixSystems = JSON.parse(JSON.stringify(DEFAULT_FIX_SYSTEMS));
+    // V10 : melange de 2 produits
+    s.mix = s.mix || { on: false, outerId: null };
     s.products.forEach(p => {
       const def = DEFAULT_PRODUCTS.find(d => d.id === p.id);
       if (def && p.packsPerMP == null) p.packsPerMP = def.packsPerMP;
       if (def && p.priceDate == null) p.priceDate = def.priceDate;
       if (def && p.density == null) p.density = def.density;
+      if (def && p.plateArea == null) p.plateArea = def.plateArea;
       p.thicknesses.forEach(item => {
         const d = def && def.thicknesses.find(x => x.t === item.t);
         if (d) {
@@ -92,6 +167,52 @@
     }
     rec(0, []);
     return out.map(layers => ({ layers, total: layers.reduce((a, b) => a + b, 0), price: product ? comboPrice(layers, product) : null }));
+  }
+
+  // Melange : 1re couche (cote mur) dans le produit A, couches suivantes dans le produit B.
+  // Chaque combinaison garde la liste des produits couche par couche (prods).
+  function allCombosMixed(tA, tB, maxLayers, prodA, prodB) {
+    if (maxLayers < 2) return [];
+    const out = [];
+    [...new Set(tA)].sort((a, b) => b - a).forEach(a => {
+      allCombos(tB, maxLayers - 1, prodB).forEach(rest => {
+        const layers = [a, ...rest.layers];
+        const prods = [prodA.id, ...rest.layers.map(() => prodB.id)];
+        const pa = comboPrice([a], prodA);
+        const price = pa != null && rest.price != null ? pa + rest.price : null;
+        out.push({ layers, prods, total: a + rest.total, price });
+      });
+    });
+    return out;
+  }
+
+  // Produits couche par couche d'une zone de commande (anciennes zones : un seul produit)
+  function layerProducts(line) {
+    return Array.isArray(line.prods) && line.prods.length === line.layers.length
+      ? line.prods : line.layers.map(() => line.productId);
+  }
+
+  function isMixed(prods) {
+    return !!prods && new Set(prods).size > 1;
+  }
+
+  // Libelle d'une composition ; si plusieurs produits, on nomme chaque couche
+  function layersLabel(layers, prods, products) {
+    if (!isMixed(prods)) return comboLabel(layers) + " mm";
+    const name = id => (products.find(p => p.id === id) || {}).name || "?";
+    return layers.map((t, i) => `${t} ${name(prods[i])}`).join(" + ");
+  }
+
+  // Resistance thermique R = somme (epaisseur / lambda) ; null si un lambda manque
+  function comboR(layers, prods, products) {
+    let r = 0;
+    for (let i = 0; i < layers.length; i++) {
+      const p = products.find(x => x.id === prods[i]);
+      const lambda = p && Number(p.lambda);
+      if (!lambda) return null;
+      r += layers[i] / 1000 / lambda;
+    }
+    return r;
   }
 
   // Prix au m2 d'une combinaison = somme des prix au m2 de chaque couche
@@ -159,9 +280,12 @@
     const waste = Math.max(0, Number(order.waste) || 0) / 100;
     const map = new Map();
     order.lines.forEach(line => {
-      line.layers.forEach(t => {
-        const key = line.productId + "|" + t;
-        const cur = map.get(key) || { productId: line.productId, productName: line.productName, t, m2: 0 };
+      const prods = layerProducts(line);
+      line.layers.forEach((t, i) => {
+        const pid = prods[i];
+        const key = pid + "|" + t;
+        const pname = (products.find(p => p.id === pid) || {}).name || line.productName;
+        const cur = map.get(key) || { productId: pid, productName: pname, t, m2: 0 };
         cur.m2 += line.surface;
         map.set(key, cur);
       });
@@ -181,6 +305,100 @@
         const price = item && item.price && m2Ordered != null ? m2Ordered * item.price : null;
         return { ...row, m2Waste, m2Pack, packs, perMP, m2Ordered, price };
       });
+  }
+
+  // ===== Fixations =====
+  // Cheville pour la 1re couche : la plus courte dont la fixation max couvre l'epaisseur
+  function pickAnchor(system, t) {
+    if (!system) return null;
+    return system.articles.filter(a => a.max != null && a.max >= t).sort((a, b) => a.max - b.max)[0] || null;
+  }
+
+  // Spirale : on cherche la regle exacte du fournisseur (sinon null -> alerte, on ne devine pas)
+  function pickSpiral(system, base, add) {
+    if (!system || !system.rules) return null;
+    const rule = system.rules.find(r => base >= r.baseMin && base <= r.baseMax && add === r.add);
+    return rule ? system.articles.find(a => a.id === rule.article) || null : null;
+  }
+
+  // Systeme de spirale : choisi dans la commande, ou "auto" selon la rigidite de la 1re couche
+  function spiralSystemFor(fix, systems, baseProduct) {
+    const spirals = systems.filter(s => s.kind === "spirale");
+    if (fix.spiralSystem && fix.spiralSystem !== "auto") return spirals.find(s => s.id === fix.spiralSystem) || null;
+    const want = baseProduct && baseProduct.type === "souple" ? "souple" : "dur";
+    return spirals.find(s => s.hardness === want) || spirals[0] || null;
+  }
+
+  // Fixations d'une zone : une entree par couche, ou une alerte si rien ne convient
+  function lineFixations(line, products, systems, fix) {
+    const items = [], alerts = [];
+    if (!fix || !fix.on) return { items, alerts };
+    const prods = layerProducts(line);
+    const anchorSys = systems.find(s => s.id === fix.anchorSystem && s.kind === "cheville")
+      || systems.find(s => s.kind === "cheville");
+    const spiralSys = spiralSystemFor(fix, systems, products.find(p => p.id === prods[0]));
+    let base = 0;
+    line.layers.forEach((t, i) => {
+      const product = products.find(p => p.id === prods[i]);
+      const first = i === 0;
+      const sys = first ? anchorSys : spiralSys;
+      const qty = Number(first ? fix.anchorQty : fix.spiralQty) || 0;
+      const unit = first ? fix.anchorUnit : fix.spiralUnit;
+      const what = first ? "cheville" : "spirale";
+      const article = first ? pickAnchor(sys, t) : pickSpiral(sys, base, t);
+      if (!sys) alerts.push(`aucun système de ${what} dans le catalogue`);
+      else if (!article) alerts.push(first
+        ? `aucune cheville ${sys.name} pour ${t} mm`
+        : `aucune spirale ${sys.name} pour ${t} mm sur ${base} mm`);
+      else {
+        let perM2 = qty;
+        if (unit === "plaque") {
+          const area = product && Number(product.plateArea);
+          if (!area) { alerts.push(`surface de plaque manquante pour ${product ? product.name : "?"}`); perM2 = null; }
+          else perM2 = qty / area;
+        }
+        if (perM2 != null && qty > 0) items.push({ systemId: sys.id, articleId: article.id, layer: i, pieces: line.surface * perM2 });
+      }
+      base += t;
+    });
+    return { items, alerts };
+  }
+
+  // Recap fixations d'une commande : pieces + chute, boites entieres, prix
+  function computeFixTotals(order, products, systems) {
+    const fix = order.fix;
+    const waste = Math.max(0, Number(order.waste) || 0) / 100;
+    const map = new Map(), alerts = [];
+    order.lines.forEach(line => {
+      const r = lineFixations(line, products, systems, fix);
+      r.alerts.forEach(a => alerts.push({ lineId: line.id, zone: zoneLabel(line), text: a }));
+      r.items.forEach(it => {
+        const key = it.systemId + "|" + it.articleId;
+        const cur = map.get(key) || { systemId: it.systemId, articleId: it.articleId, pieces: 0 };
+        cur.pieces += it.pieces;
+        map.set(key, cur);
+      });
+    });
+    const rows = [...map.values()].map(row => {
+      const sys = systems.find(s => s.id === row.systemId);
+      const a = sys.articles.find(x => x.id === row.articleId);
+      // Arrondi a la piece superieure, puis a la boite superieure
+      const piecesWaste = Math.ceil(row.pieces * (1 + waste) - 1e-9);
+      const boxes = a.pack ? Math.ceil(piecesWaste / a.pack) : null;
+      const piecesOrdered = boxes != null ? boxes * a.pack : piecesWaste;
+      const price = a.price100 != null ? piecesOrdered * a.price100 / 100 : null;
+      return { ...row, systemName: sys.name, kind: sys.kind, priceNote: sys.priceNote || "", name: a.name, art: a.art,
+               pack: a.pack, price100: a.price100, piecesWaste, boxes, piecesOrdered, price };
+    }).sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "cheville" ? -1 : 1) || naturalSort(a.name, b.name));
+    return { rows, alerts };
+  }
+
+  // Texte court des fixations d'une zone (Excel, PDF) : "8x140 + U200"
+  function lineFixLabel(line, products, systems, fix) {
+    const r = lineFixations(line, products, systems, fix);
+    if (!fix || !fix.on) return "";
+    const names = r.items.map(it => it.articleId);
+    return names.join(" + ") + (r.alerts.length ? (names.length ? " + " : "") + "⚠" : "");
   }
 
   function mpText(packs, perMP) {
@@ -291,7 +509,7 @@
     return roles;
   }
 
-  const api = { DEFAULT_PRODUCTS, fmt, fmt0, newOrder, migrate, allCombos, comboPrice, sortCombos, spread, comboLabel, evalSurface, computeTotals, mpText, frDate, zoneLabel, xlNum, typeFromDensity, naturalSort, etageRank, todayIso, parsePasted, parseNum, guessRoles };
+  const api = { DEFAULT_PRODUCTS, DEFAULT_FIX_SYSTEMS, defaultFix, allCombosMixed, layerProducts, isMixed, layersLabel, comboR, pickAnchor, pickSpiral, spiralSystemFor, lineFixations, computeFixTotals, lineFixLabel, fmt, fmt0, newOrder, migrate, allCombos, comboPrice, sortCombos, spread, comboLabel, evalSurface, computeTotals, mpText, frDate, zoneLabel, xlNum, typeFromDensity, naturalSort, etageRank, todayIso, parsePasted, parseNum, guessRoles };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else Object.assign(root, api);
 })(typeof window !== "undefined" ? window : globalThis);
