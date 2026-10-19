@@ -1273,12 +1273,12 @@ async function exportPdf() {
 
   try {
     walk(view);
-    // Pied de page : signature et numero de page
+    // Pied de page : nom de l'appli et numero de page (pas de nom de personne sur le bon)
     const n = doc.getNumberOfPages();
     for (let i = 1; i <= n; i++) {
       doc.setPage(i);
       doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GREY);
-      doc.text(pdfText("Strate · Hugo N."), M, 297 - 8);
+      doc.text("Strate", M, 297 - 8);
       doc.text(`Page ${i} / ${n}`, 210 - M, 297 - 8, { align: "right" });
     }
     doc.save(pdfFileName());
