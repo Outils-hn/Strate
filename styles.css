@@ -258,6 +258,7 @@ td.num { font-family: var(--mono); font-size: 13.5px; }
 td input { height: 32px; line-height: 30px; padding: 0 8px; min-width: 64px; }
 /* Catalogue : champs a la largeur de leur contenu */
 #thicknessRows input:not([type="checkbox"]), #fixArticles input[inputmode] { width: 96px; }
+#thicknessRows input[data-field="packsPerMP"] { width: 64px; }
 #fixRules input { width: 80px; }
 td input[type="checkbox"] { min-width: 0; }
 tr.off td:not(:first-child) { opacity: .4; }

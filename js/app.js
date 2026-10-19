@@ -375,7 +375,7 @@ function renderOrder() {
     <h3>Isolant à commander</h3>
     <div class="table-wrap" style="margin-top:4px">
       <table>
-        <thead><tr><th>Épaisseur</th><th class="num">m² + chute</th><th class="num">Paquets</th><th class="num">m² cdés</th><th class="num">CHF HT</th></tr></thead>
+        <thead><tr><th>Épaisseur</th><th class="num">m² + chute</th><th class="num">Colis</th><th class="num">m² cdés</th><th class="num">CHF HT</th></tr></thead>
         <tbody>${rows.map(r => `
           <tr>
             <td>${r.t} mm${multiProduct ? `<br><span class="meta">${escapeHtml(r.productName)}</span>` : ""}</td>
@@ -389,7 +389,7 @@ function renderOrder() {
       </table>
     </div>
     ${total ? `<p class="note">Estimation aux prix catalogue (${escapeHtml(priceDateNote(rows))}) : à confirmer par le fournisseur.</p>` : ""}
-    ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}
+    ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par colis de cette épaisseur dans le catalogue.</p>` : ""}
     ${fixSummaryHtml()}
     ${deliveryHtml()}`;
   renderExcelHint();
@@ -464,7 +464,7 @@ function orderText() {
     txt += `${name}\n`;
     rows.filter(r => r.productName === name).forEach(r => {
       txt += r.packs != null
-        ? `- ${r.t} mm : ${r.packs} paquet${r.packs > 1 ? "s" : ""} (${fmt(r.m2Ordered)} m²)${mpText(r.packs, r.perMP) ? ` soit ${mpText(r.packs, r.perMP)}` : ""}\n`
+        ? `- ${r.t} mm : ${r.packs} colis (${fmt(r.m2Ordered)} m²)${mpText(r.packs, r.perMP) ? ` soit ${mpText(r.packs, r.perMP)}` : ""}\n`
         : `- ${r.t} mm : ${fmt(r.m2Waste, 1)} m²\n`;
     });
     txt += "\n";
@@ -555,7 +555,7 @@ function deliveryClipboard(pl) {
 function recapClipboard() {
   const pl = plan();
   if (pl.active && !pl.nothingLeft) return deliveryClipboard(pl);
-  const header = ["Produit", "Épaisseur (mm)", "m² nets", "m² + chute", "Paquets", "Multipacs", "m² commandés", "CHF/m² HT", "CHF HT"];
+  const header = ["Produit", "Épaisseur (mm)", "m² nets", "m² + chute", "Colis", "Palettes", "m² commandés", "CHF/m² HT", "CHF HT"];
   const data = orderTotals();
   const values = data.map(r => {
     const product = state.products.find(p => p.id === r.productId);
@@ -658,7 +658,6 @@ function renderCatalog() {
   renderDensityHint();
   $("productType").value = p.type;
   $("productLambda").value = decOut(p.lambda);
-  $("productPacksMP").value = p.packsPerMP ?? "";
   $("productPlateArea").value = decOut(p.plateArea);
   $("productPriceDate").value = frDate(p.priceDate);
   $("catalogSub").textContent = `${state.products.length} produit${state.products.length > 1 ? "s" : ""}`;
@@ -668,10 +667,12 @@ function renderCatalog() {
       <td><input type="checkbox" data-field="on" ${x.on ? "checked" : ""} aria-label="Disponible"></td>
       <td class="num">${x.t}</td>
       <td class="num"><input type="text" data-field="m2Pack" value="${decOut(x.m2Pack)}" inputmode="decimal" autocomplete="off"></td>
+      <td class="num"><input type="text" data-field="packsPerMP" value="${x.packsPerMP ?? ""}" inputmode="numeric" autocomplete="off"></td>
+      <td class="num meta">${x.packsPerMP && x.m2Pack ? fmt(x.packsPerMP * x.m2Pack) : "—"}</td>
       <td class="num"><input type="text" data-field="price" value="${decOut(x.price, 2)}" inputmode="decimal" autocomplete="off"></td>
       <td><button class="btn small ghost" data-del="${x.t}" aria-label="Supprimer">✕</button></td>
     </tr>`).join("")
-    : `<tr><td colspan="5" class="empty">Aucune épaisseur — ajoutes-en une.</td></tr>`;
+    : `<tr><td colspan="7" class="empty">Aucune épaisseur — ajoutes-en une.</td></tr>`;
 }
 
 // Champs decimaux du catalogue : affiches avec une virgule (7,5), lus aussi avec un point
@@ -966,10 +967,6 @@ $("productLambda").addEventListener("input", e => {
   currentProduct().lambda = v || null;
   renderProductPicker(); renderResults(); saveState();
 });
-$("productPacksMP").addEventListener("input", e => {
-  currentProduct().packsPerMP = Number(e.target.value) || null;
-  renderOrder(); saveState();
-});
 $("productPlateArea").addEventListener("input", e => {
   const v = decIn(e.target.value);
   if (v === undefined) return;
@@ -1002,7 +999,7 @@ $("thicknessRows").addEventListener("input", e => {
   } else {
     const v = decIn(e.target.value);
     if (v === undefined) return;
-    item[field] = v;
+    item[field] = field === "packsPerMP" ? (Math.round(v) || null) : v;
     // Un prix modifie a la main = prix releve aujourd'hui
     if (field === "price") { currentProduct().priceDate = todayIso(); $("productPriceDate").value = frDate(todayIso()); }
     renderResults(); renderOrder();
@@ -1046,12 +1043,12 @@ $("newProductBtn").addEventListener("click", async () => {
   const id = "p" + Date.now();
   state.products.push({
     id, name: r.values.name.trim(), density: Number(r.values.density.replace(",", ".")) || null,
-    type: typeFromDensity(Number(r.values.density.replace(",", "."))) || "semi-rigide", lambda: null, packsPerMP: null, priceDate: null,
+    type: typeFromDensity(Number(r.values.density.replace(",", "."))) || "semi-rigide", lambda: null, priceDate: null,
     thicknesses: [...new Set(list)].map(t => ({ t, on: true, m2Pack: null, price: null }))
   });
   state.currentId = id;
   refreshAll();
-  toast("Pense à renseigner les m² par paquet");
+  toast("Pense à renseigner les m² par colis et les colis par palette");
 });
 
 $("renameProductBtn").addEventListener("click", async () => {
@@ -1129,7 +1126,7 @@ function buildPrintView() {
   }).join("");
 
   const recapHtml = `<table>
-    <thead><tr>${multiProduct ? "<th>Produit</th>" : ""}<th>Épaisseur</th><th class="num">m² nets</th><th class="num">m² + chute</th><th class="num">Paquets</th><th>Multipacs</th><th class="num">m² commandés</th>${total ? '<th class="num">CHF HT</th>' : ""}</tr></thead>
+    <thead><tr>${multiProduct ? "<th>Produit</th>" : ""}<th>Épaisseur</th><th class="num">m² nets</th><th class="num">m² + chute</th><th class="num">Colis</th><th>Palettes</th><th class="num">m² commandés</th>${total ? '<th class="num">CHF HT</th>' : ""}</tr></thead>
     <tbody>${rows.map(r => `<tr>
       ${multiProduct ? `<td>${escapeHtml(r.productName)}</td>` : ""}
       <td>${r.t} mm</td>
@@ -1193,7 +1190,7 @@ function buildPrintView() {
     ${total && fixTotal ? `<p style="font-weight:700; margin-top:8px">Total estimé isolant + fixations : ${fmt(total + fixTotal)} CHF HT</p>` : ""}`}
     <h2>Détail par façade et par étage</h2>
     ${facadeHtml}
-    <p class="pv-foot">Quantités arrondies au paquet supérieur, chute de ${waste} % incluse.${total ? " " + escapeHtml(priceDateNote(rows).replace(/^./, c => c.toUpperCase())) + ", prix indicatifs." : ""}${fixNotes ? " Fixations : " + escapeHtml(fixNotes) + ", arrondies à la boîte supérieure." : ""} Établi avec Strate le ${today}.</p>`;
+    <p class="pv-foot">Quantités arrondies au colis supérieur, chute de ${waste} % incluse.${total ? " " + escapeHtml(priceDateNote(rows).replace(/^./, c => c.toUpperCase())) + ", prix indicatifs." : ""}${fixNotes ? " Fixations : " + escapeHtml(fixNotes) + ", arrondies à la boîte supérieure." : ""} Établi avec Strate le ${today}.</p>`;
 }
 
 // ===== Bon de commande PDF (telechargement direct) =====
@@ -1481,7 +1478,7 @@ const HELP = {
   classement: ["Classement", "« Recommandé » : le moins de couches possible, puis l'épaisseur la plus juste, puis des couches équilibrées (120 + 100 plutôt que 180 + 40, plus facile à poser). « Le moins cher » : trié par prix au m² du catalogue."],
   surface: ["Surface", "La surface de la zone à isoler, en m². Tu peux taper un calcul : 12,5*3,2 + 4*2,5 − 1,2*1,4 (panneaux additionnés, ouvertures retirées). Le résultat s'affiche sous le champ."],
   mix: ["Mélanger 2 produits", "Pour une 1re couche (côté mur) dans un produit et les couches suivantes dans un autre, par ex. une laine souple contre le mur et une plaque semi-rigide avec voile à l'extérieur. Il faut au moins 2 produits dans le catalogue."],
-  chute: ["Chute", "Pourcentage ajouté aux quantités pour couvrir les coupes et la casse (isolant et fixations). Les quantités sont ensuite arrondies au paquet / à la boîte supérieure."],
+  chute: ["Chute", "Pourcentage ajouté aux quantités pour couvrir les coupes et la casse (isolant et fixations). Les quantités sont ensuite arrondies au colis / à la boîte supérieure."],
   delivery: ["Livraisons partielles", "Pour commander en plusieurs fois : 80 % = chaque livraison fait 80 % du total, sans dépasser ce qui reste. Après l'envoi, touche « Marquer la livraison comme commandée » : la fois suivante, l'appli propose automatiquement le solde. Les exports (Excel, PDF, mail) reprennent les quantités de la livraison en cours."],
   fixations: ["Fixations", "1re couche (côté mur) : cheville choisie selon sa « fixation max » (la plus courte qui couvre l'épaisseur). Couches suivantes : spirale lue dans l'abaque du fournisseur ; « Auto » prend Drall-Fix si la 1re couche est semi-rigide/rigide, Drillfast si elle est souple. Quantité par plaque (surface de plaque dans le catalogue) ou par m². Si rien ne convient, une alerte s'affiche : l'appli ne devine pas."],
   abaque: ["Abaque", "Chaque ligne dit : si la couche déjà posée fait entre « Base de » et « à » mm, et que la couche à fixer fait X mm, alors utiliser telle spirale. Recopie ici le tableau du fournisseur ; une combinaison absente déclenche une alerte."]
@@ -1496,7 +1493,7 @@ document.addEventListener("click", e => {
 }, true);
 
 const GUIDE = [
-  ["Bienvenue dans Strate", `<p>Strate trouve <b>quelles épaisseurs d'isolant empiler</b> pour atteindre l'épaisseur dessinée, puis prépare la <b>commande</b> (paquets, fixations, prix).</p><p>3 étapes, 1 minute.</p>`],
+  ["Bienvenue dans Strate", `<p>Strate trouve <b>quelles épaisseurs d'isolant empiler</b> pour atteindre l'épaisseur dessinée, puis prépare la <b>commande</b> (colis, palettes, fixations, prix).</p><p>3 étapes, 1 minute.</p>`],
   ["1. Trouver la combinaison", `<ol><li>Choisis le <b>produit</b> (ou 2 produits à mélanger).</li><li>Tape l'<b>épaisseur cible</b> et la tolérance.</li><li>Les combinaisons s'affichent, la <b>recommandée</b> en vert. L'onglet « Épaisseur la plus proche » dit ce qui est réalisable autour de ta cote.</li></ol>`],
   ["2. Remplir la commande", `<ol><li>Saisis la <b>surface</b> (un calcul est accepté), la <b>façade</b> et l'<b>étage</b>.</li><li>Touche <b>« + Commande »</b> sur la combinaison choisie.</li><li>Recommence pour chaque zone : façade et étage restent remplis.</li></ol><p>Touche une zone pour la corriger.</p>`],
   ["3. Régler et envoyer", `<ul><li><b>Réglages</b> : chute, fixations, livraison en plusieurs fois.</li><li><b>Exports</b> : copie pour Excel (au fil de la tâche), récap, <b>bon de commande PDF</b> classé par façade et étage, texte pour mail.</li><li><b>Sauvegarde</b> régulièrement (en bas) : tes données ne vivent que dans ce navigateur.</li></ul><p>Les <b>?</b> à côté des réglages expliquent chaque option. Ce guide reste accessible avec le bouton « ? Guide ».</p>`]
@@ -1609,9 +1606,9 @@ $("restoreFile").addEventListener("change", async e => {
 const ROLES = [
   { key: "", label: "Ignorer" },
   { key: "t", label: "Épaisseur (mm)" },
-  { key: "m2Pack", label: "m² / paquet" },
+  { key: "m2Pack", label: "m² / colis" },
   { key: "price", label: "Prix CHF/m²" },
-  { key: "packsPerMP", label: "Paquets / multipac" }
+  { key: "packsPerMP", label: "Colis / palette" }
 ];
 let importGrid = [];   // lignes x colonnes (texte)
 let importRoles = [];  // role choisi pour chaque colonne
@@ -1721,7 +1718,7 @@ $("doImportBtn").addEventListener("click", () => {
     if (!name) { $("importName").focus(); toast("Donne un nom au produit"); return; }
     p = { id: "p" + Date.now(), name, type: $("importType").value,
           lambda: Number($("importLambda").value) || null, density: Number($("importDensity").value) || null,
-          packsPerMP: null, thicknesses: [] };
+          thicknesses: [] };
     state.products.push(p);
   } else {
     p = state.products.find(x => x.id === destId);
@@ -1732,11 +1729,8 @@ $("doImportBtn").addEventListener("click", () => {
     if (!item) { item = { t: r.t, on: true, m2Pack: null, price: null }; p.thicknesses.push(item); }
     ["m2Pack", "price", "packsPerMP"].forEach(k => { if (r[k] != null) item[k] = r[k]; });
   });
-  // Si toutes les epaisseurs ont le meme nb de paquets par multipac, on le met au niveau du produit
   // Prix importes = prix du jour de l'import
   if (rows.some(r => r.price != null)) p.priceDate = todayIso();
-  const mps = [...new Set(rows.map(r => r.packsPerMP).filter(Boolean))];
-  if (mps.length === 1 && p.packsPerMP == null) p.packsPerMP = mps[0];
   state.currentId = p.id;
   toast(`${rows.length} épaisseur${rows.length > 1 ? "s" : ""} importée${rows.length > 1 ? "s" : ""} dans « ${p.name} »`);
   resetImport();

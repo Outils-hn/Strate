@@ -7,8 +7,8 @@
   "use strict";
 
   // ===== Catalogue par defaut =====
-  // Isover Suisse, ISORESIST 1000 031 F : plaque facade ventilee 60 x 125 cm, ~40 kg/m3
-  // m2 par paquet (EP) et prix CHF/m2 HT d'apres la fiche produit CRB
+  // Isover Suisse, ISORESIST 1000 031 F : plaque facade ventilee 60 x 125 cm, ~40 kg/m3, lambda 0,031
+  // D'apres la fiche Isover (assortiment) : prix CHF/m2 HT, m2 par colis isole (CI), colis par palette.
   const DEFAULT_PRODUCTS = [
     {
       id: "isoresist-1000-031-f",
@@ -17,21 +17,24 @@
       lambda: 0.031,
       density: 40,
       plateArea: 0.75,   // plaque 60 x 125 cm
-      packsPerMP: 12,
-      priceDate: "2026-10-18",
+      priceDate: "2026-10-19",
       thicknesses: [
-        { t: 40,  m2Pack: 7.50, price: 11.90 },
-        { t: 60,  m2Pack: 4.50, price: 17.30 },
-        { t: 80,  m2Pack: 3.75, price: 22.80 },
-        { t: 100, m2Pack: 3.00, price: 28.20 },
-        { t: 120, m2Pack: 2.25, price: 33.70 },
-        { t: 140, m2Pack: 1.50, price: 38.90, packsPerMP: 16 },
-        { t: 160, m2Pack: 1.50, price: 43.90 },
-        { t: 180, m2Pack: 1.50, price: 49.30 },
-        { t: 200, m2Pack: 1.50, price: 54.90 }
+        { t: 40,  m2Pack: 9.00, price: 17.30, packsPerMP: 12 },
+        { t: 60,  m2Pack: 5.25, price: 25.00, packsPerMP: 12 },
+        { t: 80,  m2Pack: 4.50, price: 32.85, packsPerMP: 12 },
+        { t: 100, m2Pack: 3.75, price: 40.60, packsPerMP: 12 },
+        { t: 120, m2Pack: 3.00, price: 48.65, packsPerMP: 12 },
+        { t: 140, m2Pack: 2.25, price: 55.95, packsPerMP: 12 },
+        { t: 160, m2Pack: 2.25, price: 63.20, packsPerMP: 12 },
+        { t: 180, m2Pack: 1.50, price: 71.05, packsPerMP: 16 },
+        { t: 200, m2Pack: 1.50, price: 79.20, packsPerMP: 16 }
       ].map(x => ({ ...x, on: true }))
     }
   ];
+  // Anciennes valeurs par defaut (V2 a V13, fiche CRB perimee) : corrigees automatiquement
+  // si l'utilisateur ne les a pas modifiees. [m2 par colis, prix]
+  const OLD_ISORESIST = { 40: [7.5, 11.9], 60: [4.5, 17.3], 80: [3.75, 22.8], 100: [3, 28.2], 120: [2.25, 33.7],
+                          140: [1.5, 38.9], 160: [1.5, 43.9], 180: [1.5, 49.3], 200: [1.5, 54.9] };
 
   // ===== Fixations par defaut : catalogue HFT 09/2026 =====
   // Chevilles (1re couche, cote mur) : on prend la plus courte dont la
@@ -141,12 +144,19 @@
     s.mix = s.mix || { on: false, outerId: null };
     s.products.forEach(p => {
       const def = DEFAULT_PRODUCTS.find(d => d.id === p.id);
-      if (def && p.packsPerMP == null) p.packsPerMP = def.packsPerMP;
       if (def && p.priceDate == null) p.priceDate = def.priceDate;
       if (def && p.density == null) p.density = def.density;
       if (def && p.plateArea == null) p.plateArea = def.plateArea;
       p.thicknesses.forEach(item => {
         const d = def && def.thicknesses.find(x => x.t === item.t);
+        // V13.2 : correction des donnees Isoresist erronees, seulement si elles n'ont pas ete retouchees
+        const old = def && OLD_ISORESIST[item.t];
+        if (d && old && item.m2Pack === old[0] && item.price === old[1]) {
+          item.m2Pack = d.m2Pack; item.price = d.price; item.packsPerMP = d.packsPerMP;
+          p.priceDate = def.priceDate;
+        }
+        // Colis par palette : desormais par epaisseur (avant : une valeur pour tout le produit)
+        if (item.packsPerMP == null && p.packsPerMP) item.packsPerMP = p.packsPerMP;
         if (d) {
           if (item.m2Pack == null) item.m2Pack = d.m2Pack;
           if (item.price == null) item.price = d.price;
@@ -283,7 +293,7 @@
     } catch (e) { return NaN; }
   }
 
-  // Recap d'une commande : m2 par produit et par epaisseur, chute, paquets, prix
+  // Recap d'une commande : m2 par produit et par epaisseur, chute, colis, palettes, prix
   function computeTotals(order, products) {
     const waste = Math.max(0, Number(order.waste) || 0) / 100;
     const map = new Map();
@@ -306,8 +316,8 @@
         const m2Pack = item && item.m2Pack;
         const perMP = (item && item.packsPerMP) || (product && product.packsPerMP) || 0;
         const m2Waste = row.m2 * (1 + waste);
-        // Arrondi au paquet superieur : on ne commande pas un demi-paquet
-        // (petit epsilon pour eviter qu'une imprecision de calcul ajoute un paquet)
+        // Arrondi au colis superieur : on ne commande pas un demi-colis
+        // (petit epsilon pour eviter qu'une imprecision de calcul ajoute un colis)
         const packs = m2Pack ? Math.ceil(m2Waste / m2Pack - 1e-9) : null;
         const m2Ordered = packs != null ? packs * m2Pack : null;
         const price = item && item.price && m2Ordered != null ? m2Ordered * item.price : null;
@@ -405,7 +415,7 @@
   // Chaque livraison = X % du total (arrondi a l'unite de commande superieure),
   // sans jamais depasser ce qui reste. Avec 80 % puis 80 %, la 2e livraison
   // propose donc automatiquement le solde.
-  // Unite de commande : paquet pour l'isolant, boite pour les fixations
+  // Unite de commande : colis pour l'isolant, boite pour les fixations
   // (a defaut : m2 ou pieces si le conditionnement est inconnu).
   function deliveryPlan(order, products, systems) {
     const pct = Math.min(100, Math.max(0, Number(order.deliveryPct) || 0));
@@ -416,7 +426,7 @@
       const byPack = r.packs != null;
       const total = byPack ? r.packs : Math.round(r.m2Waste * 100) / 100;
       items.push({ key: `iso|${r.productId}|${r.t}`, kind: "iso", label: `${r.t} mm`, productName: r.productName,
-                   unit: byPack ? "paq." : "m²", total, unitPrice: r.price != null && byPack && r.packs ? r.price / r.packs : null,
+                   unit: byPack ? "colis" : "m²", total, unitPrice: r.price != null && byPack && r.packs ? r.price / r.packs : null,
                    m2PerUnit: byPack ? r.m2Pack : 1 });
     });
     computeFixTotals(order, products, systems).rows.forEach(r => {
@@ -466,10 +476,10 @@
   }
 
   function mpText(packs, perMP) {
-    // Decompose en multipacs + paquets : 15 paquets avec 12/MP -> 1 MP + 3 paquets
+    // Decompose en palettes + colis : 15 colis avec 12 colis/palette -> 1 pal. + 3 colis
     if (!perMP || packs < perMP) return "";
     const mp = Math.floor(packs / perMP), rest = packs % perMP;
-    return `${mp} MP${rest ? ` + ${rest} paq.` : ""}`;
+    return `${mp} pal.${rest ? ` + ${rest} colis` : ""}`;
   }
 
   function frDate(iso) {
@@ -556,8 +566,8 @@
       header.forEach((h, i) => {
         if (!roles.includes("t") && /(épaisseur|epaisseur|dicke|stärke|staerke|^mm$|ép\.)/.test(h)) roles[i] = "t";
         else if (!roles.includes("price") && /(prix|preis|chf|fr\.)/.test(h)) roles[i] = "price";
-        else if (!roles.includes("packsPerMP") && /(multipa|\bmp\b|ep\s*\/\s*mp|pakete\s*\/\s*mp)/.test(h)) roles[i] = "packsPerMP";
-        else if (!roles.includes("m2Pack") && /(m²|m2)/.test(h) && /(paquet|paket|\bep\b|emballage|colis|pack)/.test(h)) roles[i] = "m2Pack";
+        else if (!roles.includes("packsPerMP") && /(palette|multipa|\bmp\b|ep\s*\/\s*mp|pakete\s*\/\s*mp|colis\s*\/\s*pal|\bci\b)/.test(h) && !/(m²|m2)/.test(h)) roles[i] = "packsPerMP";
+        else if (!roles.includes("m2Pack") && /(m²|m2)/.test(h) && /(paquet|paket|\bep\b|emballage|colis|pack|\bci\b)/.test(h)) roles[i] = "m2Pack";
       });
     }
     if (!roles.includes("t")) {
