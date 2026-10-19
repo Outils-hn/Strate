@@ -366,10 +366,12 @@ function renderOrder() {
   const fixOn = curOrder().fix.on;
   const fixTot = fixOn ? fixTotals().rows.reduce((s, r) => s + (r.price || 0), 0) : 0;
   $("orderSummary").innerHTML = `
-    ${total ? `<div class="totals">
-      <span class="total-big">${fmt(total + fixTot)} <small>CHF HT</small></span>
-      <span class="meta">${fixTot ? `isolant ${fmt(total)} + fixations ${fmt(fixTot)}` : "prix catalogue"}</span>
-    </div>` : ""}
+    <div class="kpis">
+      <div class="kpi"><span>Total estimé</span><b>${total ? fmt(total + fixTot) : "—"}<small>CHF HT</small></b>
+        ${fixTot ? `<em>isolant ${fmt(total)} + fixations ${fmt(fixTot)}</em>` : ""}</div>
+      <div class="kpi"><span>Surface</span><b>${fmt0(lines.reduce((a, l) => a + l.surface, 0))}<small>m²</small></b>
+        <em>${lines.length} zone${lines.length > 1 ? "s" : ""}</em></div>
+    </div>
     <h3>Isolant à commander</h3>
     <div class="table-wrap" style="margin-top:4px">
       <table>
@@ -386,7 +388,7 @@ function renderOrder() {
         ${total ? `<tfoot><tr><td colspan="4">Sous-total isolant</td><td class="num">${fmt(total)}</td></tr></tfoot>` : ""}
       </table>
     </div>
-    ${total ? `<p class="hint">${escapeHtml(priceDateNote(rows).replace(/^./, c => c.toUpperCase()))}.</p>` : ""}
+    ${total ? `<p class="note">Estimation aux prix catalogue (${escapeHtml(priceDateNote(rows))}) : à confirmer par le fournisseur.</p>` : ""}
     ${rows.some(r => r.packs == null) ? `<p class="hint">« — » : renseigne les m² par paquet de cette épaisseur dans le catalogue.</p>` : ""}
     ${fixSummaryHtml()}
     ${deliveryHtml()}`;
@@ -490,9 +492,9 @@ function orderText() {
 // x:num donne a Excel la vraie valeur numerique, quel que soit le separateur decimal
 // du PC (virgule en France, point sur certains PC suisses).
 const XL = {
-  th: "background:#1D2226;color:#FFFFFF;font-weight:bold;border:.5pt solid #7F7F7F;padding:3px 6px;",
+  th: "background:#8B3A2E;color:#FFFFFF;font-weight:bold;border:.5pt solid #7F7F7F;padding:3px 6px;",
   td: "border:.5pt solid #BFBFBF;padding:3px 6px;",
-  tot: "font-weight:bold;background:#F5E5B8;border:.5pt solid #7F7F7F;padding:3px 6px;"
+  tot: "font-weight:bold;background:#FBE9E6;border:.5pt solid #7F7F7F;padding:3px 6px;"
 };
 
 function xlCell(v, opts = {}) {
@@ -1222,7 +1224,7 @@ async function exportPdf() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const M = 12, W = 210 - 2 * M, BOTTOM = 297 - 16;
-  const INK = [29, 34, 38], GREY = [100, 108, 113], WOOL = [245, 229, 184];
+  const INK = [31, 36, 48], GREY = [107, 114, 128], WOOL = [251, 233, 230], BRICK = [139, 58, 46];
   let y = 16;
   const ensure = h => { if (y + h > BOTTOM) { doc.addPage(); y = 16; } };
   const write = (text, size, opts = {}) => {
@@ -1243,7 +1245,7 @@ async function exportPdf() {
       ensure(18);
       y += 3;
       write(el.textContent, 12.5, { bold: true, after: 1 });
-      doc.setDrawColor(...INK); doc.setLineWidth(0.5); doc.line(M, y, M + W, y);
+      doc.setDrawColor(...BRICK); doc.setLineWidth(0.5); doc.line(M, y, M + W, y);
       y += 3;
     }
     else if (tag === "H3") { ensure(14); y += 1; write(el.textContent, 11, { bold: true, after: 1.5 }); }
@@ -1255,7 +1257,7 @@ async function exportPdf() {
         html: el, startY: y, margin: { left: M, right: M, bottom: 16 }, theme: "plain",
         styles: { font: "helvetica", fontSize: 9, textColor: [17, 17, 17], cellPadding: { top: 1.6, bottom: 1.6, left: 1.8, right: 1.8 },
                   lineColor: [205, 205, 205], lineWidth: { bottom: 0.2 }, overflow: "linebreak" },
-        headStyles: { fillColor: INK, textColor: 255, fontStyle: "bold", lineWidth: 0 },
+        headStyles: { fillColor: BRICK, textColor: 255, fontStyle: "bold", lineWidth: 0 },
         didParseCell: data => {
           data.cell.text = data.cell.text.map(pdfText);
           // AutoTable garde l'element HTML d'origine dans "_element"
@@ -1446,6 +1448,13 @@ $("resetFixBtn").addEventListener("click", async () => {
   renderFixCatalog(); afterFixEdit();
 });
 
+// ===== Navigation du haut =====
+// Catalogue et Fixations sont des blocs replies : le lien les ouvre en plus de faire defiler
+document.querySelectorAll(".topnav a[data-open]").forEach(a => a.addEventListener("click", () => {
+  const target = document.querySelector(a.getAttribute("href"));
+  if (target && target.tagName === "DETAILS") target.open = true;
+}));
+
 // ===== Aides "?" et guide de demarrage =====
 const HELP = {
   tolerance: ["Tolérance", "Écart accepté autour de l'épaisseur cible. Exemple : cible 220, tolérance − 0 et + 10 → l'appli propose les combinaisons de 220 à 230 mm. Un isolant souple accepte un peu de « moins » (il se comprime), un rigide non."],
@@ -1493,9 +1502,9 @@ $("guideBtn").addEventListener("click", showGuide);
 // ===== Theme clair / sombre =====
 // "Auto" suit le reglage du systeme ; Clair et Sombre le forcent.
 const THEMES = [
-  { key: "auto", label: "Thème : auto" },
-  { key: "light", label: "Thème : clair" },
-  { key: "dark", label: "Thème : sombre" }
+  { key: "auto", label: "Thème auto" },
+  { key: "light", label: "Thème clair" },
+  { key: "dark", label: "Thème sombre" }
 ];
 function currentTheme() {
   try { return localStorage.getItem("strate.theme") || "auto"; } catch (e) { return document.documentElement.dataset.theme || "auto"; }

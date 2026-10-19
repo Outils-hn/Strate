@@ -11,21 +11,30 @@
 <meta name="description" content="Combinaisons d'epaisseurs d'isolation et commande">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=12.2">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
-<header>
-  <h1>Strate</h1>
-  <p>Combinaisons d'épaisseurs d'isolation</p>
-  <button class="btn small" id="guideBtn" style="margin-left:auto" title="Comment ça marche ?">? Guide</button>
-  <button class="btn small" id="themeBtn" title="Changer de thème"></button>
+<header class="topbar">
+  <div class="topbar-in">
+    <h1 class="logo">Strate<span>.</span></h1>
+    <nav class="topnav" aria-label="Sections">
+      <a href="#calcCard">Calcul</a>
+      <a href="#orderCard">Commande</a>
+      <a href="#catalogCard" data-open>Catalogue</a>
+      <a href="#fixCard" data-open>Fixations</a>
+      <a href="#backupCard">Sauvegarde</a>
+    </nav>
+    <button class="pill" id="guideBtn" title="Comment ça marche ?">Guide</button>
+    <button class="pill" id="themeBtn" title="Changer de thème"></button>
+  </div>
 </header>
 
 <main>
   <div class="col-main">
   <!-- Calcul (en premier : c'est ce qu'on utilise le plus) -->
-  <section class="card">
+  <section class="card" id="calcCard">
+    <h2>Calcul</h2>
     <label><span id="productLabel">Produit</span>
       <select id="productSelect"></select>
     </label>
@@ -301,7 +310,7 @@
   </div>
 </main>
 
-<footer>Strate · V12.2 · Hugo N.</footer>
+<footer>Conçu par Hugo N. · Strate V13</footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -317,7 +326,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=12.2"></script>
-<script src="js/app.js?v=12.2"></script>
+<script src="js/core.js?v=13"></script>
+<script src="js/app.js?v=13"></script>
 </body>
 </html>
