@@ -341,3 +341,51 @@ test("import : en-tetes Isover colis / palette", () => {
   const grid = c.parsePasted("Epaisseur mm\tm2/CI\tCI/palette\tCHF/m2\n120\t3,00\t12\t48,65");
   assert.deepEqual(c.guessRoles(grid), ["t", "m2Pack", "packsPerMP", "price"]);
 });
+
+// ===== Catalogue commun =====
+const { mergeShared, sharedStatus, stable } = require("../js/core.js");
+const P = (id, price) => ({ id, name: id, thicknesses: [{ t: 100, price }] });
+const R = (p, deleted_at = null) => ({ id: p.id, data: p, updated_at: "2026-10-29", deleted_at });
+
+test("catalogue commun : element jamais partage reste sur ce poste", () => {
+  const f = mergeShared([P("a", 10)], [], {});
+  assert.deepEqual(f.items.map(x => x.id), ["a"]);
+  assert.equal(f.status.a, "local");
+});
+
+test("catalogue commun : version de l'equipe adoptee si rien n'a change ici", () => {
+  const base = { a: stable(P("a", 10)) };
+  const f = mergeShared([P("a", 10)], [R(P("a", 12))], base);
+  assert.equal(f.items[0].thicknesses[0].price, 12);
+  assert.equal(f.status.a, "shared");
+  assert.equal(f.updated, 1);
+});
+
+test("catalogue commun : une modif locale non envoyee n'est pas ecrasee", () => {
+  const base = { a: stable(P("a", 10)) };
+  const f = mergeShared([P("a", 11)], [R(P("a", 12))], base);
+  assert.equal(f.items[0].thicknesses[0].price, 11);
+  assert.equal(f.status.a, "modified");
+});
+
+test("catalogue commun : nouvel element de l'equipe ajoute, element supprime retire sauf s'il sert", () => {
+  const base = { a: stable(P("a", 10)), b: stable(P("b", 5)) };
+  const f = mergeShared([P("a", 10), P("b", 5)], [R(P("a", 10), "2026-10-29"), R(P("b", 5)), R(P("c", 7))], base);
+  assert.deepEqual(f.items.map(x => x.id), ["b", "c"]);
+  const g = mergeShared([P("a", 10)], [R(P("a", 10), "2026-10-29")], base, new Set(["a"]));
+  assert.deepEqual(g.items.map(x => x.id), ["a"]);
+  assert.equal(g.status.a, "local");
+});
+
+test("catalogue commun : premier contact, la version de l'equipe gagne", () => {
+  const f = mergeShared([P("a", 10)], [R(P("a", 12))], {});
+  assert.equal(f.items[0].thicknesses[0].price, 12);
+  assert.equal(f.status.a, "shared");
+});
+
+test("catalogue commun : etat apres modif locale", () => {
+  const base = { a: stable(P("a", 10)) };
+  assert.equal(sharedStatus(P("a", 10), base), "shared");
+  assert.equal(sharedStatus(P("a", 11), base), "modified");
+  assert.equal(sharedStatus(P("z", 1), base), "local");
+});

@@ -21,6 +21,7 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **V13** : style de la famille Masse (barre de navigation, cartes blanches, titres en petites capitales, accent brique, chiffres en chasse fixe et milliers à la suisse, tuiles de résultats), page qui ne déborde plus sur téléphone.
 - **V13.2** : données ISORESIST corrigées d'après la fiche Isover (prix, m² par colis, colis par palette), vocabulaire Isover « colis » / « palette », colis par palette réglables épaisseur par épaisseur.
 - **V14** : style « Épure » de la famille (Format, Index, Linear, Masse, Trame) avec le jaune laine de verre comme couleur propre, sélecteur des 6 applis, pied de page avec « À propos » ; champs qui acceptent « 1'200 », virgule ou point ; tolérance négative, cible hors catalogue et surface négative signalées ; bon de commande PDF au style Épure avec police embarquée (m² correct) ; check-up automatique dans un navigateur.
+- **V15** : catalogue commun à l'équipe (produits avec prix, m²/colis et colis/palette, systèmes de fixation) dans la base de Masse ; lecture libre, partage protégé par le PIN de Masse ; modifications locales gardées tant qu'elles ne sont pas envoyées ; sans réseau, Strate continue avec la copie du poste. Script SQL : `supabase/strate-catalogue.sql` (à exécuter une fois).
 - Le catalogue (m²/colis, colis/palette et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
 ## Organisation du code

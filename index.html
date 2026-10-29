@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=14.0">
+<link rel="stylesheet" href="styles.css?v=15.0">
 </head>
 <body>
 <header class="topbar">
@@ -133,6 +133,7 @@
       <button class="btn small" id="renameProductBtn">Renommer</button>
       <button class="btn small ghost" id="deleteProductBtn">Supprimer</button>
     </div>
+    <div class="shared-row" id="sharedProduct" aria-live="polite"></div>
     <div class="grid" style="margin-top:14px">
       <label>Masse vol. (kg/m³)
         <input id="productDensity" type="text" step="1" min="0" placeholder="ex. 40" inputmode="numeric">
@@ -220,6 +221,7 @@
       <button class="btn small" id="renameFixSystemBtn">Renommer</button>
       <button class="btn small ghost" id="deleteFixSystemBtn">Supprimer</button>
     </div>
+    <div class="shared-row" id="sharedFix" aria-live="polite"></div>
     <p class="hint" id="fixKindHint"></p>
     <div class="grid" style="margin-top:10px">
       <label id="fixHardnessLabel">Pour une 1re couche
@@ -328,7 +330,7 @@
   </div>
 </main>
 
-<footer>Strate v14.0 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a></footer>
+<footer>Strate v15.0 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a></footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -344,7 +346,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=14.0"></script>
-<script src="js/app.js?v=14.0"></script>
+<script src="js/core.js?v=15.0"></script>
+<script src="js/app.js?v=15.0"></script>
 </body>
 </html>
