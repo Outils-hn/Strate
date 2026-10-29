@@ -392,3 +392,18 @@ footer button:hover, footer a:hover { color: var(--ink); text-decoration: underl
 .linkish { font: inherit; font-size: 12.5px; color: var(--muted); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .linkish:hover { color: var(--ink); }
 .product-fiche { margin-left: 8px; }
+
+/* ===== Famille Epure : fond « papier » et couleur de l'appli bien presente =====
+   Memes regles que les 5 autres applis : filet jaune en haut, onglet actif souligne,
+   petits titres en couleur (version foncee du jaune, lisible en texte). */
+:root:not([data-theme="dark"]) { --strate-ink: #8A6400; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --strate-ink: #E6BC3A; } }
+:root[data-theme="dark"] { --strate-ink: #E6BC3A; }
+/* Fond papier en mode clair (auto clair ou clair force) */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --bg: #F1F0EC; --surface: #FAFAF8; --sunk: #EAE9E4; --field: #FAFAF8; --line: #E0DFD9; --line-strong: #D0CFC8; --muted: #5D6068; }
+}
+:root[data-theme="light"] { --bg: #F1F0EC; --surface: #FAFAF8; --sunk: #EAE9E4; --field: #FAFAF8; --line: #E0DFD9; --line-strong: #D0CFC8; --muted: #5D6068; }
+body { border-top: 3px solid var(--strate); }
+.card h2, details.card > summary { color: var(--strate-ink); }
+.tab.active { background: var(--surface); color: var(--ink); box-shadow: inset 0 -2px 0 var(--strate); }
