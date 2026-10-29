@@ -48,7 +48,7 @@ await step("Ecran principal", async () => {
   await page.screenshot({ path: `${OUT}/01-strate.png`, fullPage: true });
   await page.locator("#appsMenu summary").click(); await page.waitForTimeout(150);
   const applis = (await page.locator(".apps-menu a .nm").allInnerTexts()).join(", ");
-  verif("Selecteur : 6 applis dans l'ordre", applis === "Format, Index, Linear, Masse, Strate, Trame", applis);
+  verif("Selecteur : 7 applis dans l'ordre", applis === "Access, Format, Index, Linear, Masse, Strate, Trame", applis);
   await page.screenshot({ path: `${OUT}/02-selecteur.png` });
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
