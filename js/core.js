@@ -583,7 +583,58 @@
     return roles;
   }
 
-  const api = { DEFAULT_PRODUCTS, deliveryPlan, recordDelivery, DEFAULT_FIX_SYSTEMS, defaultFix, allCombosMixed, layerProducts, isMixed, layersLabel, comboR, pickAnchor, pickSpiral, spiralSystemFor, lineFixations, computeFixTotals, lineFixLabel, fmt, fmt0, newOrder, migrate, allCombos, comboPrice, sortCombos, spread, comboLabel, evalSurface, computeTotals, mpText, frDate, zoneLabel, xlNum, typeFromDensity, naturalSort, etageRank, todayIso, parsePasted, parseNum, guessRoles };
+  // ===== Catalogue commun a l'equipe (Supabase, projet de Masse) =====
+  // Empreinte stable d'un element du catalogue (ordre des cles fige) pour savoir s'il a change.
+  function stable(v) {
+    if (Array.isArray(v)) return "[" + v.map(stable).join(",") + "]";
+    if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + stable(v[k])).join(",") + "}";
+    return JSON.stringify(v ?? null);
+  }
+
+  /**
+   * Fusionne une liste locale (produits ou systemes de fixation) avec le catalogue commun.
+   * - base : derniere version recue de l'equipe pour chaque id (sert a reperer les modifs locales) ;
+   * - element commun pas modifie ici : version de l'equipe ;
+   * - element commun modifie ici et pas encore envoye : garde la version locale (« modifie ») ;
+   * - element supprime par l'equipe : retire, sauf s'il est modifie ici ou utilise par une commande ;
+   * - element jamais partage : garde, « sur ce poste ».
+   * Renvoie la liste fusionnee, l'etat de chaque id et la nouvelle base.
+   */
+  function mergeShared(local, remote, base, used = new Set()) {
+    const byId = new Map(remote.map(r => [r.id, r]));
+    const out = [], status = {}, newBase = {};
+    let updated = 0;
+    for (const item of local) {
+      const r = byId.get(item.id);
+      if (!r) { out.push(item); status[item.id] = "local"; continue; }
+      const modified = base[item.id] != null && stable(item) !== base[item.id];
+      if (r.deleted_at) {
+        if (modified || used.has(item.id)) { out.push(item); status[item.id] = "local"; }
+        continue;
+      }
+      const remoteData = { ...r.data, id: r.id };
+      newBase[r.id] = stable(remoteData);
+      if (modified && stable(item) !== newBase[r.id]) { out.push(item); status[item.id] = "modified"; continue; }
+      if (stable(item) !== newBase[r.id]) updated++;
+      out.push(remoteData); status[r.id] = "shared";
+    }
+    const localIds = new Set(local.map(x => x.id));
+    for (const r of remote) {
+      if (r.deleted_at || localIds.has(r.id)) continue;
+      const remoteData = { ...r.data, id: r.id };
+      newBase[r.id] = stable(remoteData);
+      out.push(remoteData); status[r.id] = "shared"; updated++;
+    }
+    return { items: out, status, base: newBase, updated };
+  }
+
+  /** Etat d'un element apres une modif locale (sans nouvelle lecture du catalogue commun). */
+  function sharedStatus(item, base) {
+    if (base[item.id] == null) return "local";
+    return stable(item) === base[item.id] ? "shared" : "modified";
+  }
+
+  const api = { DEFAULT_PRODUCTS, deliveryPlan, recordDelivery, DEFAULT_FIX_SYSTEMS, defaultFix, allCombosMixed, layerProducts, isMixed, layersLabel, comboR, pickAnchor, pickSpiral, spiralSystemFor, lineFixations, computeFixTotals, lineFixLabel, fmt, fmt0, newOrder, migrate, allCombos, comboPrice, sortCombos, spread, comboLabel, evalSurface, computeTotals, mpText, frDate, zoneLabel, xlNum, typeFromDensity, naturalSort, etageRank, todayIso, parsePasted, parseNum, guessRoles, stable, mergeShared, sharedStatus };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else Object.assign(root, api);
 })(typeof window !== "undefined" ? window : globalThis);

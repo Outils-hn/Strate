@@ -62,6 +62,7 @@ function saveState() {
     facade: $("facade").value, etage: $("etage").value, mode
   };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  if (typeof renderShared === "function" && $("sharedProduct")) renderShared();
 }
 
 function currentProduct() {
@@ -785,12 +786,12 @@ function openModal({ title, text = "", html = "", fields = [], buttons = [{ labe
       document.removeEventListener("keydown", onKey);
       resolve(result);
     };
-    const choose = i => {
+    const choose = async i => {
       const b = buttons[i];
       const v = values();
-      // On ne valide les champs que pour le bouton principal
+      // On ne valide les champs que pour le bouton principal (la validation peut interroger le reseau)
       if (b.primary && validate) {
-        const err = validate(v);
+        const err = await validate(v);
         if (err) { $("modalError").textContent = err; return; }
       }
       close({ button: b.value, values: v });
@@ -1576,7 +1577,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 14.0</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.0</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1807,6 +1808,149 @@ $("doImportBtn").addEventListener("click", () => {
   refreshAll();
 });
 
+// ===== Catalogue commun a l'equipe =====
+// Produits (prix, colis, palettes compris) et systemes de fixation partages via la base de Masse
+// (Supabase, Francfort). Lecture libre ; envoi et retrait proteges par le PIN de Masse.
+// Sans reseau, Strate continue avec la copie de ce poste. Logique de fusion : core.js (testee).
+const SB_URL = "https://kkxqgdljkvuapryqydcx.supabase.co";
+const SB_KEY = "sb_publishable_xAvqc9Z9clDeBJi_MVsh_g_-oRKBSqK"; // cle PUBLIQUE, faite pour une page web
+const BASE_KEY = "strate.shared.base";
+const PIN_KEY = "strate-pin";
+const shared = { state: "sync", at: null };
+
+function loadBase() {
+  try { const b = JSON.parse(localStorage.getItem(BASE_KEY)); return { produit: b?.produit || {}, fixation: b?.fixation || {} }; }
+  catch (e) { return { produit: {}, fixation: {} }; }
+}
+let sharedBase = loadBase();
+function saveBase() { try { localStorage.setItem(BASE_KEY, JSON.stringify(sharedBase)); } catch (e) {} }
+
+async function sbFetch(path, init = {}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 8000);
+  try { return await fetch(SB_URL + path, { ...init, headers: { apikey: SB_KEY, "Content-Type": "application/json" }, signal: ctrl.signal }); }
+  finally { clearTimeout(t); }
+}
+async function sbRpc(fn, args) {
+  try {
+    const r = await sbFetch("/rest/v1/rpc/" + fn, { method: "POST", body: JSON.stringify(args) });
+    if (!r.ok) return { ok: false, error: "Le catalogue commun ne répond pas. Réessaie plus tard." };
+    return await r.json();
+  } catch (e) { return { ok: false, error: "Pas de connexion au catalogue commun." }; }
+}
+
+// Ids utilises par les commandes : un element retire par l'equipe reste sur ce poste
+function usedIds() {
+  const prods = new Set(), fix = new Set();
+  for (const o of state.orders) {
+    for (const l of o.lines || []) { prods.add(l.productId); (l.prods || []).forEach(id => prods.add(id)); }
+    if (o.fix) { fix.add(o.fix.anchorSystem); fix.add(o.fix.spiralSystem); }
+  }
+  return { prods, fix };
+}
+
+async function syncShared(manual = false) {
+  shared.state = "sync"; renderShared();
+  let rows = null;
+  try {
+    const r = await sbFetch("/rest/v1/strate_catalogue?select=id,kind,data,updated_at,deleted_at");
+    if (r.ok) rows = await r.json();
+  } catch (e) {}
+  if (!rows) {
+    shared.state = "offline"; renderShared();
+    if (manual) toast("Catalogue commun injoignable : Strate continue avec la copie de ce poste");
+    return;
+  }
+  const used = usedIds();
+  const fp = mergeShared(state.products, rows.filter(r => r.kind === "produit"), sharedBase.produit, used.prods);
+  const ff = mergeShared(state.fixSystems, rows.filter(r => r.kind === "fixation"), sharedBase.fixation, used.fix);
+  state.products = fp.items.length ? fp.items : state.products;
+  state.fixSystems = ff.items;
+  sharedBase = { produit: fp.base, fixation: ff.base };
+  saveBase();
+  shared.state = "ok"; shared.at = new Date();
+  refreshAll();
+  const n = fp.updated + ff.updated;
+  if (n || manual) toast(n ? `Catalogue mis à jour depuis l'équipe (${n} élément${n > 1 ? "s" : ""})` : "Catalogue commun à jour");
+}
+
+async function getPin() {
+  try { const p = sessionStorage.getItem(PIN_KEY); if (p) return p; } catch (e) {}
+  const r = await openModal({
+    title: "Code PIN requis",
+    text: "Le catalogue est commun à l'équipe : saisis le PIN (le même que Masse) pour le modifier pendant cette session.",
+    fields: [{ id: "pin", label: "Code PIN", type: "password", inputmode: "numeric" }],
+    buttons: [{ label: "Annuler", value: null, ghost: true }, { label: "Déverrouiller", value: "ok", primary: true }],
+    validate: async v => {
+      if (!v.pin) return "Saisis le PIN.";
+      const res = await sbRpc("verify_pin", { p_pin: v.pin });
+      return res.ok ? null : (res.error || "PIN incorrect.");
+    },
+  });
+  if (!r || r.button !== "ok") return null;
+  try { sessionStorage.setItem(PIN_KEY, r.values.pin); } catch (e) {}
+  return r.values.pin;
+}
+function forgetPinIf(err) { if (/PIN|essais/i.test(err || "")) { try { sessionStorage.removeItem(PIN_KEY); } catch (e) {} } }
+
+async function sendShared(kind, item) {
+  const pin = await getPin();
+  if (!pin) return;
+  const res = await sbRpc("strate_save_item", { p_pin: pin, p_kind: kind, p: item });
+  if (!res.ok) { forgetPinIf(res.error); toast(res.error || "Envoi impossible"); return; }
+  sharedBase[kind][item.id] = stable(item); saveBase();
+  toast(`« ${item.name} » est maintenant commun à l'équipe`);
+  renderShared();
+}
+async function unshare(kind, item) {
+  if (!(await confirmModal(`Retirer « ${item.name} » du catalogue commun ?`,
+    "Il reste sur ce poste. Chez les collègues, il disparaîtra à la prochaine ouverture (sauf s'il sert à une de leurs commandes).",
+    "Retirer", true))) return;
+  const pin = await getPin();
+  if (!pin) return;
+  const res = await sbRpc("strate_delete_item", { p_pin: pin, p_id: item.id });
+  if (!res.ok) { forgetPinIf(res.error); toast(res.error || "Retrait impossible"); return; }
+  delete sharedBase[kind][item.id]; saveBase();
+  toast(`« ${item.name} » est retiré du catalogue commun`);
+  renderShared();
+}
+async function revertShared(kind, item) {
+  if (!(await confirmModal("Annuler tes modifications ?", `« ${item.name} » reprend la version commune de l'équipe.`, "Annuler mes modifs", true))) return;
+  const back = JSON.parse(sharedBase[kind][item.id]);
+  const list = kind === "produit" ? state.products : state.fixSystems;
+  const i = list.findIndex(x => x.id === item.id);
+  if (i >= 0) list[i] = back;
+  refreshAll();
+}
+
+function sharedRowHtml(kind, item) {
+  if (!item) return "";
+  const st = sharedStatus(item, sharedBase[kind]);
+  const label = { shared: "Commun à l'équipe", modified: "Modifié sur ce poste, pas encore envoyé", local: "Sur ce poste seulement" }[st];
+  const btns = st === "local" ? `<button class="btn small" data-sh="send">Partager avec l'équipe</button>`
+    : st === "modified" ? `<button class="btn small primary" data-sh="send">Envoyer à l'équipe</button><button class="btn small ghost" data-sh="revert">Annuler mes modifs</button>`
+    : `<button class="btn small ghost" data-sh="unshare">Retirer du catalogue commun</button>`;
+  const sync = shared.state === "sync" ? "Synchronisation…"
+    : shared.state === "offline" ? `Hors ligne · <button data-sh="sync">Réessayer</button>`
+    : `À jour à ${shared.at.toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })} · <button data-sh="sync">Actualiser</button>`;
+  return `<span class="dot ${st}" aria-hidden="true"></span><span class="what">${label}</span>${shared.state === "offline" && st !== "local" ? "" : btns}<span class="sync">${sync}</span>`;
+}
+function renderShared() {
+  $("sharedProduct").innerHTML = sharedRowHtml("produit", currentProduct());
+  $("sharedFix").innerHTML = sharedRowHtml("fixation", currentFixSystem());
+}
+[["sharedProduct", "produit", () => currentProduct()], ["sharedFix", "fixation", () => currentFixSystem()]].forEach(([id, kind, cur]) => {
+  $(id).addEventListener("click", e => {
+    const b = e.target.closest("[data-sh]");
+    if (!b) return;
+    const act = b.dataset.sh, item = cur();
+    if (act === "sync") syncShared(true);
+    else if (act === "send") sendShared(kind, item);
+    else if (act === "unshare") unshare(kind, item);
+    else if (act === "revert") revertShared(kind, item);
+  });
+});
+
 // ===== Demarrage : on restaure les dernieres saisies =====
 // Remet dans les champs les dernieres saisies (au demarrage et apres une restauration)
 function restoreInputs() {
@@ -1831,3 +1975,5 @@ renderProductPicker();
 renderCatalog();
 renderOrder();
 renderBackupHint();
+renderShared();
+syncShared();
