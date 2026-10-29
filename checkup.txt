@@ -1,0 +1,22 @@
+OK     Selecteur : 6 applis dans l'ordre (Format, Index, Linear, Masse, Strate, Trame)
+OK     Menu ferme avec Echap
+OK     Pied de page (Strate v15.0 · Conçu par Hugo N. · 2026 · Sauvegarde)
+OK     Fenetre À propos
+OK     Tolérance « 2,5 » : plage 221 à 223,5 mm (Aucune combinaison dans la tolérance (221 à 223,5 mm). En dessous 89,25 CHF/m² + Commande )
+OK     Tolérance négative signalée et comptée 0 (Tolérance négative ou illisible : comptée comme 0 mm. Recommandée 120 + 100 mm 89,25 CHF/m)
+OK     Cible 5000 mm : message « maximum faisable » (5'000 mm, c'est plus que le maximum faisable : 400 mm avec 2 couches (épaisseur max 200 mm). Augmente le nombre de couch)
+OK     Cible « 1'200 » lue 1200 (1'200 mm, c'est plus que le maximum faisable : 400 mm avec 2 couches (épaisseur )
+OK     Surface négative signalée
+OK     Commande : 2 zones
+OK     Bon de commande PDF telecharge (Commande isolation - Commande 1 - 2026-10-29.pdf)
+OK     Aucune fenetre native du navigateur (0)
+OK     Produit de l'équipe reçu (Isover ISORESIST 1000 031 F | Flumroc Test 3)
+OK     État « Commun à l'équipe »
+OK     Modif locale : « Modifié sur ce poste »
+OK     PIN faux refusé dans la fenêtre
+OK     Envoi à l'équipe avec le PIN (verify_pin, verify_pin, strate_save_item)
+OK     Produit de ce poste : bouton « Partager avec l'équipe »
+OK     Fiche Index liée au produit (https://index-hn.lovable.app/?fiche=fiche-iso)
+OK     Lien aussi visible dans le calcul
+OK     Hors ligne : Strate continue, « Hors ligne · Réessayer »
+OK     Mode sombre retenu
