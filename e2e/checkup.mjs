@@ -21,6 +21,8 @@ async function ctx({ dark = false, horsLigne = false } = {}) {
   await c.route(/supabase\.co/, async (route) => {
     if (horsLigne) return route.abort();
     const url = new URL(route.request().url());
+    if (url.hostname.startsWith("ngfzwfbraqkdcocdcmib") && url.pathname.endsWith("/products"))
+      return route.fulfill({ json: [{ id: "fiche-iso", name: "ISORESIST 1000 031 F", supplier: "Isover", category: "Isolants", deleted_at: null }] });
     if (url.pathname.endsWith("/strate_catalogue")) return route.fulfill({ json: [{ id: FLUMROC.id, kind: "produit", data: FLUMROC, updated_at: "2026-10-29", deleted_at: null }] });
     const m = url.pathname.match(/rpc\/(\w+)/);
     const body = JSON.parse(route.request().postData() || "{}");
@@ -109,6 +111,20 @@ await step("Catalogue commun", async () => {
   await page.screenshot({ path: `${OUT}/06-catalogue-commun.png`, fullPage: true });
   await page.selectOption("#catalogProductSelect", { index: 0 }); await page.waitForTimeout(200);
   verif("Produit de ce poste : bouton « Partager avec l'équipe »", await page.locator("#sharedProduct").getByRole("button", { name: "Partager avec l'équipe" }).isVisible());
+  await c.close();
+});
+
+await step("Lien vers une fiche Index", async () => {
+  const { c, page } = await ctx();
+  await page.waitForTimeout(600);
+  await page.locator("#catalogCard summary").click();
+  await page.getByRole("button", { name: "Lier une fiche Index" }).click(); await page.waitForTimeout(300);
+  await page.getByLabel("Rechercher une fiche dans Index").fill("isoresist"); await page.waitForTimeout(400);
+  await page.locator("#ficheResults").getByRole("button", { name: /ISORESIST 1000 031 F/ }).click(); await page.waitForTimeout(300);
+  const href = await page.locator("#productFiche a").getAttribute("href");
+  verif("Fiche Index liée au produit", href === "https://index-hn.lovable.app/?fiche=fiche-iso", href ?? "");
+  verif("Lien aussi visible dans le calcul", await page.locator("#productInfo a").isVisible());
+  await page.screenshot({ path: `${OUT}/07-lien-index.png`, fullPage: false });
   await c.close();
 });
 

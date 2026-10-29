@@ -82,6 +82,7 @@ function renderProductPicker() {
   const p = currentProduct();
   // Nom complet sous le menu (il est souvent tronque sur telephone)
   $("productInfo").textContent = productInfoText(p);
+  if (p.indexFiche) $("productInfo").insertAdjacentHTML("beforeend", `<span class="product-fiche">${ficheLinkHtml(p.indexFiche)}</span>`);
   // Melange : il faut au moins 2 produits dans le catalogue
   const others = state.products.filter(x => x.id !== p.id);
   $("mixToggle").checked = !!state.mix.on && others.length > 0;
@@ -678,6 +679,7 @@ function renderDensityHint() {
 
 function renderCatalog() {
   const p = currentProduct();
+  if (typeof renderProductFiche === "function" && $("productFiche")) { fichePicking = false; renderProductFiche(); }
   $("catalogProductSelect").innerHTML = state.products.map(x =>
     `<option value="${x.id}" ${x.id === p.id ? "selected" : ""}>${escapeHtml(x.name)}</option>`).join("");
   $("productDensity").value = p.density ?? "";
@@ -1949,6 +1951,64 @@ function renderShared() {
     else if (act === "unshare") unshare(kind, item);
     else if (act === "revert") revertShared(kind, item);
   });
+});
+
+// ===== Lien vers la fiche technique dans Index =====
+// Liste des fiches lue (en lecture seule) dans la base d'Index ; le produit garde l'id et le nom
+// de sa fiche (partages avec le catalogue commun). Bouton « Fiche technique » = ouverture dans Index.
+const INDEX_URL = "https://index-hn.lovable.app";
+const INDEX_DB = "https://ngfzwfbraqkdcocdcmib.supabase.co";
+const INDEX_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZnp3ZmJyYXFrZGNvY2RjbWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzg2NTcsImV4cCI6MjA5NTIxNDY1N30.Ikovcm4eWkLvPO_PvkI8C8DJebBT011Rz87k_EYFdbU"; // cle PUBLIQUE d'Index
+const ficheUrl = id => `${INDEX_URL}/?fiche=${encodeURIComponent(id)}`;
+let fichesIndex = null;
+function chargerFiches() {
+  fichesIndex ??= fetch(`${INDEX_DB}/rest/v1/products?select=id,name,supplier,category,deleted_at&order=name`,
+    { headers: { apikey: INDEX_KEY, Authorization: `Bearer ${INDEX_KEY}` } })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
+    .then(rows => rows.filter(r => !r.deleted_at))
+    .catch(e => { fichesIndex = null; throw e; });
+  return fichesIndex;
+}
+const sansAccents = s => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+function chercherFiches(list, q) {
+  const mots = sansAccents(q).split(/\s+/).filter(Boolean);
+  return list.filter(f => { const h = sansAccents(`${f.name} ${f.supplier} ${f.category}`); return mots.every(m => h.includes(m)); }).slice(0, 8);
+}
+function ficheLinkHtml(f) {
+  return `<a class="fiche-link" href="${ficheUrl(f.id)}" target="_blank" rel="noopener noreferrer" title="Ouvrir la fiche technique dans Index">📄 ${escapeHtml(f.name)} <span class="ext">↗</span></a>`;
+}
+let fichePicking = false;
+function renderProductFiche() {
+  const p = currentProduct(), box = $("productFiche");
+  if (!p) return;
+  if (p.indexFiche) {
+    box.innerHTML = `${ficheLinkHtml(p.indexFiche)} <button class="linkish" data-fiche="remove" aria-label="Retirer le lien vers la fiche">Retirer</button>`;
+    return;
+  }
+  if (!fichePicking) { box.innerHTML = `<button class="linkish" data-fiche="pick">Lier une fiche Index</button>`; return; }
+  box.innerHTML = `<div class="fiche-pick"><input id="ficheSearch" type="text" placeholder="Rechercher dans Index…" aria-label="Rechercher une fiche dans Index" autocomplete="off"><div id="ficheResults" class="hint">Chargement…</div></div>`;
+  const input = $("ficheSearch");
+  const show = () => chargerFiches().then(list => {
+    const res = chercherFiches(list, input.value);
+    $("ficheResults").innerHTML = res.length
+      ? res.map(f => `<button class="res" data-fiche-id="${escapeHtml(f.id)}" data-fiche-name="${escapeHtml(f.name)}">${escapeHtml(f.name)}<span class="sub">${escapeHtml(f.supplier)} · ${escapeHtml(f.category)}</span></button>`).join("")
+      : "Aucune fiche trouvée.";
+  }, () => { $("ficheResults").textContent = "Index injoignable pour le moment."; });
+  input.addEventListener("input", show);
+  input.addEventListener("keydown", e => {
+    if (e.key === "Escape") { fichePicking = false; renderProductFiche(); }
+    if (e.key === "Enter") { const b = $("ficheResults").querySelector("[data-fiche-id]"); if (b) b.click(); }
+  });
+  input.focus();
+  show();
+}
+$("productFiche").addEventListener("click", e => {
+  const p = currentProduct();
+  const b = e.target.closest("[data-fiche], [data-fiche-id]");
+  if (!b || !p) return;
+  if (b.dataset.fiche === "pick") { fichePicking = true; renderProductFiche(); }
+  else if (b.dataset.fiche === "remove") { delete p.indexFiche; refreshAll(); }
+  else if (b.dataset.ficheId) { p.indexFiche = { id: b.dataset.ficheId, name: b.dataset.ficheName }; fichePicking = false; refreshAll(); toast("Fiche technique liée"); }
 });
 
 // ===== Demarrage : on restaure les dernieres saisies =====
