@@ -1,32 +1,33 @@
-/* Strate - styles (V13 : style de la famille Masse)
-   Barre blanche en haut, fond gris raye, cartes blanches a fin liseré,
-   titres en petites capitales, accent brique, chiffres en chasse fixe.
-   Le jaune laine de verre reste reserve aux couches dessinees. */
+/* Strate - styles (V14 : style « Epure » de la famille Format, Index, Linear, Masse, Trame)
+   Blanc casse, encre presque noire, cartes blanches a fin filet, titres en petites capitales.
+   Couleur propre a Strate : le jaune laine de verre (logo, couches dessinees, recommandee). */
 :root {
-  --bg: #eceef1;
+  --bg: #fbfbfa;
   --surface: #ffffff;
-  --sunk: #f0f2f5;          /* tuiles de resultats, fonds en creux */
+  --sunk: #f4f4f2;          /* tuiles de resultats, fonds en creux */
   --field: #ffffff;
-  --ink: #1f2430;
-  --muted: #5f6673;
-  --line: #e1e4e9;
-  --line-strong: #c9ced6;
-  --accent: #8b3a2e;        /* brique, comme Masse */
-  --accent-hover: #74301f;
-  --accent-soft: #fbe9e6;
+  --ink: #1f2026;
+  --muted: #676a72;
+  --line: #e8e8e5;
+  --line-strong: #d4d4cf;
+  --accent: #1f2026;        /* actions : encre, comme les autres applis */
+  --accent-hover: #000000;
+  --accent-soft: #f1f1ef;
+  --strate: #d4a20b;        /* jaune laine de verre : couleur de Strate */
   --wool: #e2b33b;
   --wool-deep: #8a6410;
   --wool-soft: #f5e5b8;
   --wool-soft-2: #fbf3dc;
-  --action: #8b3a2e;
+  --action: #1f2026;
   --on-action: #ffffff;
   --ok: #2f6b3d;
   --warn: #8a5300;
   --warn-soft: #f6e6c6;
   --danger: #b42318;
-  --radius: 8px;
-  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
-  --stripes: repeating-linear-gradient(135deg, rgba(31,36,48,.022) 0 1px, transparent 1px 10px);
+  --radius: 10px;
+  --sans: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "Geist Mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --stripes: none;
   --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235f6673' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --loops: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='40' viewBox='0 0 12 40'%3E%3Cpath d='M0 37 C4 37 2 3 6 3 C10 3 8 37 12 37' fill='none' stroke='%238a6410' stroke-width='1.1' opacity='.55'/%3E%3C/svg%3E");
   --cross: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M0 10L10 0M-2 2L2 -2M8 12L12 8M0 0L10 10' stroke='%238a6410' stroke-width='.9' opacity='.45'/%3E%3C/svg%3E");
@@ -35,11 +36,11 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #14171c; --surface: #1c2027; --sunk: #232831; --field: #191d23; --ink: #e6e8ec; --muted: #a2a9b4;
-    --line: #2c323b; --line-strong: #3c434e; --accent: #d9826f; --accent-hover: #e89a89; --accent-soft: #3a2420;
-    --wool-deep: #e6c063; --wool-soft: #4a3d1c; --wool-soft-2: #3a321f; --action: #c8604c; --on-action: #ffffff;
+    --bg: #121317; --surface: #1b1c21; --sunk: #25262c; --field: #17181c; --ink: #ecece8; --muted: #a6a8af;
+    --line: #2d2e34; --line-strong: #3c3d44; --accent: #ecece8; --accent-hover: #ffffff; --accent-soft: #25262c;
+    --strate: #e6bc3a; --wool-deep: #e6c063; --wool-soft: #4a3d1c; --wool-soft-2: #3a321f; --action: #ecece8; --on-action: #121317;
     --ok: #7cc48b; --warn: #f0c060; --warn-soft: #3a2f16; --danger: #ff8a7a;
-    --stripes: repeating-linear-gradient(135deg, rgba(255,255,255,.018) 0 1px, transparent 1px 10px);
+    --stripes: none;
     --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23a2a9b4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
     --loops: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='40' viewBox='0 0 12 40'%3E%3Cpath d='M0 37 C4 37 2 3 6 3 C10 3 8 37 12 37' fill='none' stroke='%23e6c063' stroke-width='1.1' opacity='.5'/%3E%3C/svg%3E");
     --cross: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M0 10L10 0M-2 2L2 -2M8 12L12 8M0 0L10 10' stroke='%23e6c063' stroke-width='.9' opacity='.4'/%3E%3C/svg%3E");
@@ -48,11 +49,11 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: #14171c; --surface: #1c2027; --sunk: #232831; --field: #191d23; --ink: #e6e8ec; --muted: #a2a9b4;
-  --line: #2c323b; --line-strong: #3c434e; --accent: #d9826f; --accent-hover: #e89a89; --accent-soft: #3a2420;
-  --wool-deep: #e6c063; --wool-soft: #4a3d1c; --wool-soft-2: #3a321f; --action: #c8604c; --on-action: #ffffff;
+  --bg: #121317; --surface: #1b1c21; --sunk: #25262c; --field: #17181c; --ink: #ecece8; --muted: #a6a8af;
+  --line: #2d2e34; --line-strong: #3c3d44; --accent: #ecece8; --accent-hover: #ffffff; --accent-soft: #25262c;
+  --strate: #e6bc3a; --wool-deep: #e6c063; --wool-soft: #4a3d1c; --wool-soft-2: #3a321f; --action: #ecece8; --on-action: #121317;
   --ok: #7cc48b; --warn: #f0c060; --warn-soft: #3a2f16; --danger: #ff8a7a;
-  --stripes: repeating-linear-gradient(135deg, rgba(255,255,255,.018) 0 1px, transparent 1px 10px);
+  --stripes: none;
   --arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23a2a9b4' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   --loops: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='40' viewBox='0 0 12 40'%3E%3Cpath d='M0 37 C4 37 2 3 6 3 C10 3 8 37 12 37' fill='none' stroke='%23e6c063' stroke-width='1.1' opacity='.5'/%3E%3C/svg%3E");
   --cross: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M0 10L10 0M-2 2L2 -2M8 12L12 8M0 0L10 10' stroke='%23e6c063' stroke-width='.9' opacity='.4'/%3E%3C/svg%3E");
@@ -66,17 +67,32 @@ html { scroll-behavior: smooth; scroll-padding-top: 70px; }
 body {
   margin: 0; color: var(--ink);
   background: var(--bg) var(--stripes) fixed;
-  font: 14.5px/1.5 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  font: 14.5px/1.5 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
 
 /* Barre du haut (comme Masse) */
 .topbar { position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
 .topbar-in { max-width: 1320px; margin: 0 auto; padding: 0 16px; height: 56px; display: flex; align-items: center; gap: 22px; }
-.logo { margin: 0; font: 600 22px/1 var(--mono); letter-spacing: -.5px; }
-.logo span { color: var(--accent); }
+/* Logo + nom avec selecteur des applis de la famille (meme rendu que les autres applis) */
+.brand { display: flex; align-items: center; gap: 10px; }
+.apps { position: relative; }
+.apps > summary { list-style: none; display: flex; align-items: center; gap: 4px; cursor: pointer; border-radius: 6px; padding: 2px 4px; }
+.apps > summary::-webkit-details-marker { display: none; }
+.apps > summary:hover { background: var(--sunk); }
+.apps .app-name { margin: 0; font: 600 17px/1 var(--sans); letter-spacing: -.01em; color: var(--ink); }
+.apps .chev { color: var(--muted); }
+.apps-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; min-width: 270px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+.apps-menu .apps-label { padding: 6px 8px 4px; font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.apps-menu a { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 5px; color: var(--ink); text-decoration: none; font-size: 14px; }
+.apps-menu a:hover, .apps-menu a:focus-visible { background: var(--sunk); }
+.apps-menu .sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.apps-menu .nm { width: 56px; flex: none; font-weight: 500; }
+.apps-menu .rl { font-size: 12px; color: var(--muted); }
+.apps-menu .ck { margin-left: auto; }
 .topnav { display: flex; gap: 22px; flex: 1; overflow-x: auto; scrollbar-width: none; }
 .topnav a { color: var(--muted); text-decoration: none; font-size: 14.5px; white-space: nowrap; }
 .topnav a:hover { color: var(--ink); }
@@ -111,7 +127,7 @@ main .card { min-width: 0; }
 /* Cartes blanches a fin liseré, titres en petites capitales espacees */
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
 .card h2, details.card > summary {
-  margin: 0 0 16px; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink);
+  margin: 0 0 16px; font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
 }
 h3 { font-size: 13.5px; margin: 18px 0 6px; color: var(--ink); font-weight: 600; }
 
@@ -320,7 +336,12 @@ td.now { font-weight: 700; }
 .modal .guide-body ol, .modal .guide-body ul { padding-left: 20px; margin: 6px 0; }
 .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--surface); padding: 8px 14px; border-radius: 4px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
 .toast.show { opacity: 1; }
-footer { text-align: center; color: var(--muted); font-size: 12.5px; padding-bottom: 28px; }
+footer { text-align: center; color: var(--muted); font-size: 12px; padding-bottom: 28px; }
+footer button, footer a { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none; }
+footer button:hover, footer a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.field-bad { border-color: var(--danger) !important; }
+.about-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.about-head b { display: block; font-size: 18px; }
 
 /* ===== Bon de commande imprimable ===== */
 #printView { display: none; }

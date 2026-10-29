@@ -2,6 +2,9 @@
    Les calculs sont dans core.js. */
 const STORAGE_KEY = "strate.v1";
 const $ = id => document.getElementById(id);
+// Lecture d'un champ numerique : « 1'200 », « 12,5 » ou « 12.5 » (NaN si illisible).
+// Les champs sont en texte (plus en « nombre ») : le navigateur avalait parfois la virgule.
+const inNum = v => parseNum(String(v ?? "").trim());
 
 
 // ===== Etat + sauvegarde navigateur =====
@@ -167,13 +170,22 @@ let lastCombos = [];
 function renderResults() {
   const p = currentProduct();
   const thick = p.thicknesses.filter(x => x.on).map(x => x.t);
-  const target = Number($("target").value);
-  const maxLayers = Number($("maxLayers").value);
+  const target = inNum($("target").value);
+  const maxLayers = inNum($("maxLayers").value);
   const res = $("results");
   $("resultsMeta").textContent = "";
 
+  // Champs illisibles ou negatifs : signales en rouge au lieu d'etre corriges en silence
+  const tolBad = ["tolMinus", "tolPlus"].filter(id => { const v = $(id).value.trim(); return v !== "" && !(inNum(v) >= 0); });
+  ["target", "tolMinus", "tolPlus"].forEach(id => $(id).classList.remove("field-bad"));
+  tolBad.forEach(id => $(id).classList.add("field-bad"));
+
   if (!thick.length) { res.innerHTML = `<p class="empty">Active au moins une épaisseur dans le catalogue.</p>`; return; }
-  if (!target || target <= 0) { res.innerHTML = `<p class="empty">Saisis une épaisseur cible.</p>`; return; }
+  if (!(target > 0)) {
+    if ($("target").value.trim()) $("target").classList.add("field-bad");
+    res.innerHTML = `<p class="empty">${$("target").value.trim() ? "Épaisseur cible illisible ou nulle : saisis une valeur en mm, ex. 220." : "Saisis une épaisseur cible."}</p>`;
+    return;
+  }
 
   // Melange : 1re couche dans le produit A, couches suivantes dans le produit B
   const b = outerProduct();
@@ -187,21 +199,31 @@ function renderResults() {
     combos = allCombos(thick, maxLayers, p).map(c => ({ ...c, prods: c.layers.map(() => p.id) }));
   }
 
+  // Cible au-dela de ce qui est faisable : on le dit, plutot que proposer « -4 600 mm »
+  const maxTotal = Math.max(0, ...combos.map(c => c.total));
+  if (target > maxTotal + Math.max(0, inNum($("tolPlus").value) || 0)) {
+    $("target").classList.add("field-bad");
+    const top = Math.max(...thick);
+    res.innerHTML = `<p class="empty">${fmt0(target)} mm, c'est plus que le maximum faisable : ${fmt0(maxTotal)} mm avec ${maxLayers} couche${maxLayers > 1 ? "s" : ""} (épaisseur max ${top} mm). Augmente le nombre de couches ou vérifie la cible.</p>`;
+    return;
+  }
+
   if (mode === "combo") {
     $("resultsTitle").textContent = "Combinaisons possibles";
-    const lo = target - Number($("tolMinus").value || 0);
-    const hi = target + Number($("tolPlus").value || 0);
+    const lo = target - Math.max(0, inNum($("tolMinus").value) || 0);
+    const hi = target + Math.max(0, inNum($("tolPlus").value) || 0);
     const byPrice = $("sortMode").value === "price";
     const ok = sortCombos(combos.filter(c => c.total >= lo && c.total <= hi), target, byPrice).slice(0, 8);
+    const tolNote = tolBad.length ? `<p class="empty">Tolérance négative ou illisible : comptée comme 0 mm.</p>` : "";
     if (!ok.length) {
-      res.innerHTML = `<p class="empty">Aucune combinaison dans la tolérance (${lo} à ${hi} mm).</p>` + nearestHtml(combos, target);
+      res.innerHTML = tolNote + `<p class="empty">Aucune combinaison dans la tolérance (${fmt0(lo)} à ${fmt0(hi)} mm).</p>` + nearestHtml(combos, target);
       return;
     }
     // Si toutes les combinaisons ont la meme epaisseur, R est identique : on l'affiche une seule fois
     // (avec 2 produits, R depend de la repartition : on l'affiche sur chaque carte)
     const sameTotal = !b && new Set(ok.map(c => c.total)).size === 1;
     if (sameTotal) $("resultsMeta").textContent = `Toutes à ${ok[0].total} mm${rText(ok[0]) ? " · " + rText(ok[0]) : ""}`;
-    res.innerHTML = ok.map((c, i) => comboCard(c, target, i === 0, !sameTotal, byPrice ? "Moins chère" : "Recommandée")).join("");
+    res.innerHTML = tolNote + ok.map((c, i) => comboCard(c, target, i === 0, !sameTotal, byPrice ? "Moins chère" : "Recommandée")).join("");
   } else {
     $("resultsTitle").textContent = "Épaisseur réalisable la plus proche";
     res.innerHTML = nearestHtml(combos, target);
@@ -231,14 +253,17 @@ function renderSurfaceCalc() {
   const raw = $("surface").value;
   const v = evalSurface(raw);
   const isPlain = /^\s*\d+([.,]\d+)?\s*$/.test(raw);
-  $("surfaceCalc").textContent = v == null || isPlain ? "" : isNaN(v) ? "Calcul illisible" : `= ${fmt0(v)} m²`;
+  const bad = v != null && !isNaN(v) && v <= 0;
+  $("surface").classList.toggle("field-bad", bad || (v != null && isNaN(v)));
+  $("surfaceCalc").textContent = bad ? "La surface doit être supérieure à 0" : v == null || isPlain ? "" : isNaN(v) ? "Calcul illisible" : `= ${fmt0(v)} m²`;
 }
 
 function addToOrder(layers, prods) {
   const surface = evalSurface($("surface").value);
   if (!surface || isNaN(surface) || surface <= 0) {
     $("surface").focus();
-    toast("Saisis d'abord la surface à isoler");
+    const raw = $("surface").value.trim();
+    toast(!raw ? "Saisis d'abord la surface à isoler" : isNaN(surface) ? "Surface illisible : ex. 42,5 ou 12,5*3,2+8" : "La surface doit être supérieure à 0");
     return;
   }
   const p = productById(prods[0]) || currentProduct();
@@ -747,7 +772,7 @@ function openModal({ title, text = "", html = "", fields = [], buttons = [{ labe
       </label>`).join("");
     $("modalButtons").innerHTML = buttons.map((b, i) =>
       `<button class="btn ${b.primary ? "primary" : ""} ${b.ghost ? "ghost" : ""}" data-mb="${i}"
-        ${b.danger ? 'style="background:#dc2626;border-color:#dc2626;color:#fff"' : ""}>${escapeHtml(b.label)}</button>`).join("");
+        ${b.danger ? 'style="background:var(--danger);border-color:var(--danger);color:#fff"' : ""}>${escapeHtml(b.label)}</button>`).join("");
     $("modal").classList.remove("hidden");
     const first = $("modalFields").querySelector("input");
     (first || $("modalButtons").querySelector(".primary") || $("modalButtons").querySelector("button")).focus();
@@ -850,7 +875,7 @@ async function editLine(id) {
 }
 
 $("deliveryPct").addEventListener("input", e => {
-  curOrder().deliveryPct = Math.min(100, Math.max(1, Number(e.target.value) || 100));
+  curOrder().deliveryPct = Math.min(100, Math.max(1, inNum(e.target.value) || 100));
   renderOrderSummaryOnly(); saveState();
 });
 // On retient si le detail des fixations est ouvert (le recap est redessine souvent)
@@ -879,7 +904,7 @@ $("orderSummary").addEventListener("click", async e => {
   }
 });
 $("waste").addEventListener("input", () => {
-  curOrder().waste = Math.max(0, Number($("waste").value) || 0);
+  curOrder().waste = Math.max(0, inNum($("waste").value) || 0);
   renderOrder(); saveState();
 });
 $("clearOrderBtn").addEventListener("click", async () => {
@@ -910,7 +935,7 @@ $("fixOn").addEventListener("change", e => { curOrder().fix.on = e.target.checke
 [["anchorQty", "anchorQty", true], ["spiralQty", "spiralQty", true], ["anchorUnit", "anchorUnit"], ["spiralUnit", "spiralUnit"],
  ["anchorSystem", "anchorSystem"], ["spiralSystem", "spiralSystem"]].forEach(([id, key, num]) => {
   $(id).addEventListener(num ? "input" : "change", e => {
-    curOrder().fix[key] = num ? Math.max(0, Number(e.target.value) || 0) : e.target.value;
+    curOrder().fix[key] = num ? Math.max(0, inNum(e.target.value) || 0) : e.target.value;
     // On ne redessine que le recap pour ne pas perdre la saisie en cours
     renderOrderSummaryOnly();
     saveState();
@@ -955,7 +980,7 @@ $("catalogProductSelect").addEventListener("change", e => { state.currentId = e.
 $("productType").addEventListener("change", e => { currentProduct().type = e.target.value; refreshAll(); });
 $("productDensity").addEventListener("input", e => {
   const p = currentProduct();
-  p.density = Number(e.target.value) || null;
+  p.density = inNum(e.target.value) || null;
   // Type deduit automatiquement (modifiable ensuite si c'est une mousse, etc.)
   const guess = typeFromDensity(p.density);
   if (guess) { p.type = guess; $("productType").value = guess; }
@@ -1017,7 +1042,7 @@ $("thicknessRows").addEventListener("click", e => {
 });
 
 $("addThicknessBtn").addEventListener("click", () => {
-  const t = Math.round(Number($("newThickness").value));
+  const t = Math.round(inNum($("newThickness").value));
   if (!t || t <= 0) return;
   const p = currentProduct();
   if (!p.thicknesses.some(x => x.t === t)) p.thicknesses.push({ t, on: true, m2Pack: null, price: null });
@@ -1209,13 +1234,32 @@ async function loadPdfLibs() {
   if (!window.jspdf.jsPDF.API.autoTable) await loadScript("vendor/jspdf.plugin.autotable.min.js");
 }
 
-// Les polices standard du PDF ne connaissent que l'alphabet occidental (Windows-1252) :
-// on remplace les rares caracteres speciaux, dont l'espace fine des milliers (1 516,50).
-const PDF_OK = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
+// Police IBM Plex Sans livree avec l'appli (vendor/fonts, licence OFL), comme les fiches de
+// Linear et Masse : la police standard du PDF perdait des caracteres (le « ² » de m²).
+const pdfFonts = {};
+async function loadPdfFonts() {
+  for (const [file, style] of [["IBMPlexSans-Regular.ttf", "normal"], ["IBMPlexSans-SemiBold.ttf", "bold"]]) {
+    if (pdfFonts[style]) continue;
+    const r = await fetch("vendor/fonts/" + file);
+    if (!r.ok) throw new Error(file);
+    const bytes = new Uint8Array(await r.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode(...bytes.subarray(i, i + 8192));
+    pdfFonts[style] = { file, data: btoa(bin) };
+  }
+}
+function installPdfFonts(doc) {
+  for (const style of ["normal", "bold"]) {
+    doc.addFileToVFS(pdfFonts[style].file, pdfFonts[style].data);
+    doc.addFont(pdfFonts[style].file, "PlexSans", style);
+  }
+  doc.setFont("PlexSans", "normal");
+}
+
+// Quelques symboles absents de la police : remplaces par un equivalent lisible
 function pdfText(s) {
   return String(s ?? "")
-    .replace(/[   ]/g, " ").replace(/⚠/g, "!").replace(/✓/g, "OK").replace(/→/g, "->").replace(/λ/g, "lambda")
-    .replace(/[^\x00-\xff]/g, ch => PDF_OK.includes(ch) ? ch : "?");
+    .replace(/[\u2009\u202f\u00a0]/g, " ").replace(/⚠/g, "!").replace(/✓/g, "OK").replace(/→/g, "->");
 }
 
 function pdfFileName() {
@@ -1229,6 +1273,7 @@ async function exportPdf() {
   const view = $("printView");
   try {
     await loadPdfLibs();
+    await loadPdfFonts();
   } catch (e) {
     // Repli : si jsPDF ne charge pas, on passe par l'impression du navigateur
     toast("PDF direct indisponible : passage par l'impression");
@@ -1239,12 +1284,22 @@ async function exportPdf() {
   view.style.cssText = "display:block; position:absolute; left:-10000px; top:0; width:186mm; font: 10pt Barlow, Arial, sans-serif;";
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const M = 12, W = 210 - 2 * M, BOTTOM = 297 - 16;
-  const INK = [31, 36, 48], GREY = [107, 114, 128], WOOL = [251, 233, 230], BRICK = [139, 58, 46];
-  let y = 16;
+  installPdfFonts(doc);
+  const M = 14, W = 210 - 2 * M, BOTTOM = 297 - 16;
+  // Style Epure : encre, gris, filets fins ; jaune laine de verre seulement dans le logo
+  const INK = [31, 32, 38], GREY = [112, 115, 124], LINE = [222, 222, 218], WOOL = [212, 162, 11];
+  // En-tete : logo + nom de l'appli, type de document et date a droite, filet encre
+  doc.setFillColor(...INK).rect(M, 10.6, 0.9, 5.4, "F");
+  doc.setFillColor(...WOOL).rect(M + 1.6, 10.85, 2, 4.9, "F");
+  doc.setDrawColor(...INK).setLineWidth(0.35).rect(M + 4.2, 10.85, 1.4, 4.9);
+  doc.setFont("PlexSans", "bold").setFontSize(13).setTextColor(...INK).text("Strate", M + 8, 15);
+  doc.setFont("PlexSans", "normal").setFontSize(7).setTextColor(...GREY)
+    .text(`BON DE COMMANDE · ${new Date().toLocaleDateString("fr-CH")}`, 210 - M, 15, { align: "right", charSpace: 0.3 });
+  doc.setDrawColor(...INK).setLineWidth(0.4).line(M, 18.5, 210 - M, 18.5);
+  let y = 25;
   const ensure = h => { if (y + h > BOTTOM) { doc.addPage(); y = 16; } };
   const write = (text, size, opts = {}) => {
-    doc.setFont("helvetica", opts.bold ? "bold" : "normal");
+    doc.setFont("PlexSans", opts.bold ? "bold" : "normal");
     doc.setFontSize(size);
     doc.setTextColor(...(opts.color || INK));
     const lines = doc.splitTextToSize(pdfText(text), W);
@@ -1261,7 +1316,7 @@ async function exportPdf() {
       ensure(18);
       y += 3;
       write(el.textContent, 12.5, { bold: true, after: 1 });
-      doc.setDrawColor(...BRICK); doc.setLineWidth(0.5); doc.line(M, y, M + W, y);
+      doc.setDrawColor(...INK); doc.setLineWidth(0.3); doc.line(M, y, M + W, y);
       y += 3;
     }
     else if (tag === "H3") { ensure(14); y += 1; write(el.textContent, 11, { bold: true, after: 1.5 }); }
@@ -1271,9 +1326,9 @@ async function exportPdf() {
     else if (tag === "TABLE") {
       doc.autoTable({
         html: el, startY: y, margin: { left: M, right: M, bottom: 16 }, theme: "plain",
-        styles: { font: "helvetica", fontSize: 9, textColor: [17, 17, 17], cellPadding: { top: 1.6, bottom: 1.6, left: 1.8, right: 1.8 },
-                  lineColor: [205, 205, 205], lineWidth: { bottom: 0.2 }, overflow: "linebreak" },
-        headStyles: { fillColor: BRICK, textColor: 255, fontStyle: "bold", lineWidth: 0 },
+        styles: { font: "PlexSans", fontSize: 9, textColor: INK, cellPadding: { top: 1.6, bottom: 1.6, left: 1.5, right: 1.5 },
+                  lineColor: LINE, lineWidth: { bottom: 0.2 }, overflow: "linebreak" },
+        headStyles: { fillColor: false, textColor: GREY, fontStyle: "normal", fontSize: 7.5, lineColor: INK, lineWidth: { bottom: 0.3 } },
         didParseCell: data => {
           data.cell.text = data.cell.text.map(pdfText);
           // AutoTable garde l'element HTML d'origine dans "_element"
@@ -1281,7 +1336,7 @@ async function exportPdf() {
           const row = data.row.raw && (data.row.raw._element || data.row.raw);
           if (cell && cell.classList && cell.classList.contains("num")) data.cell.styles.halign = "right";
           if (row && row.classList && row.classList.contains("pv-total")) {
-            data.cell.styles.fillColor = WOOL; data.cell.styles.fontStyle = "bold"; data.cell.styles.lineWidth = 0;
+            data.cell.styles.fontStyle = "bold"; data.cell.styles.lineColor = INK; data.cell.styles.lineWidth = { top: 0.3 };
           }
         }
       });
@@ -1301,8 +1356,9 @@ async function exportPdf() {
     const n = doc.getNumberOfPages();
     for (let i = 1; i <= n; i++) {
       doc.setPage(i);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GREY);
-      doc.text("Strate", M, 297 - 8);
+      doc.setFont("PlexSans", "normal"); doc.setFontSize(7.5); doc.setTextColor(...GREY);
+      doc.setDrawColor(...LINE); doc.setLineWidth(0.2); doc.line(M, 297 - 12, 210 - M, 297 - 12);
+      doc.text(`Strate · ${new Date().toLocaleDateString("fr-CH")}`, M, 297 - 8);
       doc.text(`Page ${i} / ${n}`, 210 - M, 297 - 8, { align: "right" });
     }
     doc.save(pdfFileName());
@@ -1348,9 +1404,9 @@ function renderFixCatalog() {
   $("fixArticles").innerHTML = sys.articles.map((a, i) => `<tr data-i="${i}">
     <td><input data-f="name" value="${escapeHtml(a.name)}"></td>
     <td><input data-f="art" value="${escapeHtml(a.art || "")}"></td>
-    ${isAnchor ? `<td class="num"><input data-f="max" type="number" min="0" value="${a.max ?? ""}" inputmode="numeric"></td>` : ""}
+    ${isAnchor ? `<td class="num"><input data-f="max" type="text" min="0" value="${a.max ?? ""}" inputmode="numeric"></td>` : ""}
     <td class="num"><input data-f="price100" type="text" value="${decOut(a.price100, 2)}" inputmode="decimal" autocomplete="off"></td>
-    <td class="num"><input data-f="pack" type="number" min="0" step="1" value="${a.pack ?? ""}" inputmode="numeric"></td>
+    <td class="num"><input data-f="pack" type="text" min="0" step="1" value="${a.pack ?? ""}" inputmode="numeric"></td>
     <td><button class="btn small ghost" data-delart="${i}" aria-label="Supprimer">✕</button></td></tr>`).join("")
     || `<tr><td colspan="6" class="empty">Aucun article.</td></tr>`;
   $("fixRulesBox").classList.toggle("hidden", isAnchor);
@@ -1358,9 +1414,9 @@ function renderFixCatalog() {
     sys.rules = sys.rules || [];
     const artOpts = cur => sys.articles.map(a => `<option value="${escapeHtml(a.id)}" ${a.id === cur ? "selected" : ""}>${escapeHtml(a.name)}</option>`).join("");
     $("fixRules").innerHTML = sys.rules.map((r, i) => `<tr data-i="${i}">
-      <td class="num"><input data-r="baseMin" type="number" min="0" value="${r.baseMin ?? ""}" inputmode="numeric"></td>
-      <td class="num"><input data-r="baseMax" type="number" min="0" value="${r.baseMax ?? ""}" inputmode="numeric"></td>
-      <td class="num"><input data-r="add" type="number" min="0" value="${r.add ?? ""}" inputmode="numeric"></td>
+      <td class="num"><input data-r="baseMin" type="text" min="0" value="${r.baseMin ?? ""}" inputmode="numeric"></td>
+      <td class="num"><input data-r="baseMax" type="text" min="0" value="${r.baseMax ?? ""}" inputmode="numeric"></td>
+      <td class="num"><input data-r="add" type="text" min="0" value="${r.add ?? ""}" inputmode="numeric"></td>
       <td><select data-r="article">${artOpts(r.article)}</select></td>
       <td><button class="btn small ghost" data-delrule="${i}" aria-label="Supprimer">✕</button></td></tr>`).join("")
       || `<tr><td colspan="5" class="empty">Aucune ligne.</td></tr>`;
@@ -1388,7 +1444,7 @@ $("fixArticles").addEventListener("input", e => {
     a.id = v; a.name = v;
   } else if (f === "art") a.art = e.target.value.trim();
   else if (f === "price100") { const v = decIn(e.target.value); if (v === undefined) return; a[f] = v; }
-  else a[f] = e.target.value === "" ? null : Number(e.target.value);
+  else a[f] = e.target.value === "" ? null : inNum(e.target.value);
   afterFixEdit();
 });
 $("fixArticles").addEventListener("change", e => { if (e.target.dataset.f === "name") renderFixCatalog(); });
@@ -1414,7 +1470,7 @@ $("fixRules").addEventListener("input", e => {
   const k = e.target.dataset.r, tr = e.target.closest("tr");
   if (!k || !tr) return;
   const r = currentFixSystem().rules[Number(tr.dataset.i)];
-  r[k] = k === "article" ? e.target.value : (e.target.value === "" ? null : Number(e.target.value));
+  r[k] = k === "article" ? e.target.value : (e.target.value === "" ? null : inNum(e.target.value));
   afterFixEdit();
 });
 $("fixRules").addEventListener("click", e => {
@@ -1515,6 +1571,19 @@ async function showGuide() {
   try { localStorage.setItem("strate.guideSeen", "1"); } catch (e) {}
 }
 $("guideBtn").addEventListener("click", showGuide);
+
+// Pied de page : « Conçu par … » ouvre la fenetre « À propos » (comme les autres applis)
+$("aboutBtn").addEventListener("click", () => openModal({
+  title: "À propos",
+  html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+         <div><b>Strate</b><span class="hint">Version 14.0</span></div></div>
+         <p>Conçu et développé par Hugo N.</p>
+         <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
+         <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
+}));
+// Menu des applis : se ferme en cliquant ailleurs ou avec Echap
+document.addEventListener("click", e => { const m = $("appsMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("appsMenu").open) { $("appsMenu").open = false; $("appsMenu").querySelector("summary").focus(); } });
 
 // ===== Theme clair / sombre =====
 // "Auto" suit le reglage du systeme ; Clair et Sombre le forcent.
@@ -1696,7 +1765,7 @@ $("importPreview").addEventListener("change", e => {
 });
 $("importDest").addEventListener("change", renderImport);
 $("importDensity").addEventListener("input", e => {
-  const guess = typeFromDensity(Number(e.target.value));
+  const guess = typeFromDensity(inNum(e.target.value));
   if (guess) $("importType").value = guess;
 });
 $("transposeBtn").addEventListener("click", () => {
@@ -1717,7 +1786,7 @@ $("doImportBtn").addEventListener("click", () => {
     const name = $("importName").value.trim();
     if (!name) { $("importName").focus(); toast("Donne un nom au produit"); return; }
     p = { id: "p" + Date.now(), name, type: $("importType").value,
-          lambda: Number($("importLambda").value) || null, density: Number($("importDensity").value) || null,
+          lambda: inNum($("importLambda").value) || null, density: inNum($("importDensity").value) || null,
           thicknesses: [] };
     state.products.push(p);
   } else {

@@ -11,13 +11,34 @@
 <meta name="description" content="Combinaisons d'epaisseurs d'isolation et commande">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="styles.css?v=13.2">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css?v=14.0">
 </head>
 <body>
 <header class="topbar">
   <div class="topbar-in">
-    <h1 class="logo">Strate<span>.</span></h1>
+    <div class="brand">
+      <!-- Logo : couches d'isolant (jaune laine de verre) contre le mur -->
+      <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
+        <rect x="3" y="3" width="2.5" height="16" fill="currentColor"/>
+        <rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/>
+        <rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      <details class="apps" id="appsMenu">
+        <summary aria-label="Changer d'application"><h1 class="app-name">Strate</h1>
+          <svg class="chev" width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="apps-menu">
+          <div class="apps-label">Mes outils</div>
+          <a href="https://format-hn.lovable.app"><span class="sw" style="background:#FF4D00"></span><span class="nm">Format</span><span class="rl">Débit de panneaux</span></a>
+          <a href="https://index-hn.lovable.app"><span class="sw" style="background:#6D4AFF"></span><span class="nm">Index</span><span class="rl">Fiches techniques</span></a>
+          <a href="https://linear-hn.lovable.app"><span class="sw" style="background:#2B50FF"></span><span class="nm">Linear</span><span class="rl">Mise en barre</span></a>
+          <a href="https://masse-hn.lovable.app"><span class="sw" style="background:#9A4A3A"></span><span class="nm">Masse</span><span class="rl">Poids des éléments</span></a>
+          <a href="https://hnaegellen-hub.github.io/Strate/" aria-current="page"><span class="sw" style="background:#D4A20B"></span><span class="nm">Strate</span><span class="rl">Épaisseurs d'isolation</span><span class="ck" aria-hidden="true">✓</span></a>
+          <a href="https://trame-hn.lovable.app"><span class="sw" style="background:#0E9F6E"></span><span class="nm">Trame</span><span class="rl">Répartition de perçages</span></a>
+        </div>
+      </details>
+    </div>
     <nav class="topnav" aria-label="Sections">
       <a href="#calcCard">Calcul</a>
       <a href="#orderCard">Commande</a>
@@ -57,7 +78,7 @@
 
     <div class="grid">
       <label>Épaisseur cible (mm)
-        <input id="target" type="number" min="1" value="220" inputmode="numeric">
+        <input id="target" type="text" min="1" value="220" inputmode="numeric">
       </label>
       <label>Couches max.
         <select id="maxLayers">
@@ -67,10 +88,10 @@
         </select>
       </label>
       <label class="combo-only"><span class="lbl">Tolérance − (mm) <button class="help" data-help="tolerance" aria-label="Aide">?</button></span>
-        <input id="tolMinus" type="number" min="0" value="0" inputmode="numeric">
+        <input id="tolMinus" type="text" min="0" value="0" inputmode="numeric">
       </label>
       <label class="combo-only">Tolérance + (mm)
-        <input id="tolPlus" type="number" min="0" value="10" inputmode="numeric">
+        <input id="tolPlus" type="text" min="0" value="10" inputmode="numeric">
       </label>
       <label class="combo-only"><span class="lbl">Classement <button class="help" data-help="classement" aria-label="Aide">?</button></span>
         <select id="sortMode">
@@ -114,7 +135,7 @@
     </div>
     <div class="grid" style="margin-top:14px">
       <label>Masse vol. (kg/m³)
-        <input id="productDensity" type="number" step="1" min="0" placeholder="ex. 40" inputmode="numeric">
+        <input id="productDensity" type="text" step="1" min="0" placeholder="ex. 40" inputmode="numeric">
       </label>
       <label>Type
         <select id="productType">
@@ -142,7 +163,7 @@
       </table>
     </div>
     <div class="row">
-      <input id="newThickness" type="number" min="1" placeholder="Épaisseur (mm)" style="max-width:150px" inputmode="numeric">
+      <input id="newThickness" type="text" min="1" placeholder="Épaisseur (mm)" style="max-width:150px" inputmode="numeric">
       <button class="btn" id="addThicknessBtn">Ajouter</button>
     </div>
     <div class="row">
@@ -165,7 +186,7 @@
             <input id="importName" type="text" placeholder="ex. Flumroc Dämmplatte 3">
           </label>
           <label class="import-new">Masse volumique (kg/m³)
-            <input id="importDensity" type="number" step="1" min="0" placeholder="ex. 40" inputmode="numeric">
+            <input id="importDensity" type="text" step="1" min="0" placeholder="ex. 40" inputmode="numeric">
           </label>
           <label class="import-new">Type
             <select id="importType">
@@ -175,7 +196,7 @@
             </select>
           </label>
           <label class="import-new">λ (W/m·K)
-            <input id="importLambda" type="number" step="0.001" min="0" placeholder="ex. 0,031" inputmode="decimal">
+            <input id="importLambda" type="text" step="0.001" min="0" placeholder="ex. 0,031" inputmode="decimal">
           </label>
         </div>
       </div>
@@ -261,11 +282,11 @@
       <summary>Réglages <span class="meta" id="settingsSummary"></span></summary>
       <div class="settings-head">
         <label class="inline-field">Chute
-          <input id="waste" type="number" min="0" max="50" value="5" inputmode="numeric"> %
+          <input id="waste" type="text" min="0" max="50" value="5" inputmode="numeric"> %
           <button class="help" data-help="chute" aria-label="Aide">?</button>
         </label>
         <label class="inline-field">Livraison
-          <input id="deliveryPct" type="number" min="1" max="100" value="100" inputmode="numeric"> % du total
+          <input id="deliveryPct" type="text" min="1" max="100" value="100" inputmode="numeric"> % du total
           <button class="help" data-help="delivery" aria-label="Aide">?</button>
         </label>
         <span class="row" style="margin:0; gap:4px">
@@ -276,13 +297,13 @@
       <div id="fixSettings">
         <div class="fix-line">
           <span class="fix-what">Chevilles <span class="meta">1re couche</span></span>
-          <input id="anchorQty" type="number" min="0" step="0.5" inputmode="decimal" aria-label="Nombre de chevilles">
+          <input id="anchorQty" type="text" min="0" step="0.5" inputmode="decimal" aria-label="Nombre de chevilles">
           <select id="anchorUnit" aria-label="Unité"><option value="plaque">/ plaque</option><option value="m2">/ m²</option></select>
           <select id="anchorSystem" class="fix-sys" aria-label="Système de chevilles"></select>
         </div>
         <div class="fix-line">
           <span class="fix-what">Spirales <span class="meta">couches suiv.</span></span>
-          <input id="spiralQty" type="number" min="0" step="0.5" inputmode="decimal" aria-label="Nombre de spirales">
+          <input id="spiralQty" type="text" min="0" step="0.5" inputmode="decimal" aria-label="Nombre de spirales">
           <select id="spiralUnit" aria-label="Unité"><option value="plaque">/ plaque</option><option value="m2">/ m²</option></select>
           <select id="spiralSystem" class="fix-sys" aria-label="Système de spirales"></select>
         </div>
@@ -307,7 +328,7 @@
   </div>
 </main>
 
-<footer>Conçu par Hugo N. · Strate V13.2</footer>
+<footer>Strate v14.0 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a></footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -323,7 +344,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=13.2"></script>
-<script src="js/app.js?v=13.2"></script>
+<script src="js/core.js?v=14.0"></script>
+<script src="js/app.js?v=14.0"></script>
 </body>
 </html>

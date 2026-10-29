@@ -20,6 +20,7 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **V12.1** : bon de commande PDF téléchargé directement (jsPDF, livré dans `vendor/`, sans connexion Internet), signature Hugo N.
 - **V13** : style de la famille Masse (barre de navigation, cartes blanches, titres en petites capitales, accent brique, chiffres en chasse fixe et milliers à la suisse, tuiles de résultats), page qui ne déborde plus sur téléphone.
 - **V13.2** : données ISORESIST corrigées d'après la fiche Isover (prix, m² par colis, colis par palette), vocabulaire Isover « colis » / « palette », colis par palette réglables épaisseur par épaisseur.
+- **V14** : style « Épure » de la famille (Format, Index, Linear, Masse, Trame) avec le jaune laine de verre comme couleur propre, sélecteur des 6 applis, pied de page avec « À propos » ; champs qui acceptent « 1'200 », virgule ou point ; tolérance négative, cible hors catalogue et surface négative signalées ; bon de commande PDF au style Épure avec police embarquée (m² correct) ; check-up automatique dans un navigateur.
 - Le catalogue (m²/colis, colis/palette et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
 ## Organisation du code
@@ -29,7 +30,8 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - `js/core.js` : les calculs (combinaisons, prix, commande, import…), sans lien avec la page : c'est la partie testée.
 - `js/app.js` : l'interface (boutons, affichage, sauvegarde dans le navigateur).
 - `tests/core.test.js` : les tests automatiques.
-- `vendor/` : jsPDF 2.5.1 et jsPDF-AutoTable 3.8.2 (licence MIT, voir les fichiers LICENSE), chargés au premier export PDF.
+- `vendor/` : jsPDF 2.5.1 et jsPDF-AutoTable 3.8.2 (licence MIT, voir les fichiers LICENSE), chargés au premier export PDF ; `vendor/fonts/` : IBM Plex Sans (licence OFL) pour le PDF.
+- `e2e/checkup.mjs` : check-up dans un navigateur, lancé par GitHub sur chaque branche (résultats sur la branche « captures/… »).
 
 Hébergé tel quel avec GitHub Pages, aucune installation nécessaire.
 
