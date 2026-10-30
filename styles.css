@@ -410,3 +410,18 @@ body { border-top: 3px solid var(--strate); }
 
 /* Separateur entre « Accueil » et les applis dans le menu */
 .apps-sep { height: 1px; background: var(--line); margin: 4px 8px; }
+
+/* ===== Bandeau commun de la famille (meme rendu que les 8 autres applis) =====
+   56 px, fond papier, largeur 1'440 px centree avec 32 px de marge, onglets, boutons de 32 px, theme en icone. */
+.topbar { background: var(--bg); }
+.topbar-in { max-width: 1440px; padding: 0 32px; gap: 24px; }
+.topnav { flex: 0 1 auto; gap: 4px; }
+.topnav a, .topnav a:hover { padding: 6px 12px; border-radius: 6px; font-size: 14px; line-height: 20px; }
+.topnav a:hover { color: var(--ink); }
+#guideBtn { margin-left: auto; }
+.topbar .pill { height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--ink); font: 500 13px/1 var(--sans); }
+.topbar .pill:hover { background: var(--sunk); border-color: var(--line-strong); }
+.topbar #themeBtn { width: 32px; padding: 0; border: 0; background: none; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; }
+.topbar #themeBtn:hover { background: var(--sunk); color: var(--ink); }
+main { max-width: 1440px; padding-left: 32px; padding-right: 32px; }
+@media (max-width: 900px) { .topbar-in, main { padding-left: 16px; padding-right: 16px; } }
