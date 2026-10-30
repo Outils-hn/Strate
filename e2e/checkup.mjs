@@ -48,12 +48,12 @@ await step("Ecran principal", async () => {
   await page.screenshot({ path: `${OUT}/01-strate.png`, fullPage: true });
   await page.locator("#appsMenu summary").click(); await page.waitForTimeout(150);
   const applis = (await page.locator(".apps-menu a .nm").allInnerTexts()).join(", ");
-  verif("Selecteur : 7 applis dans l'ordre", applis === "Access, Format, Index, Linear, Masse, Strate, Trame", applis);
+  verif("Selecteur : Accueil + 8 applis dans l'ordre", applis === "Accueil, Access, Check, Format, Index, Linear, Masse, Strate, Trame", applis);
   await page.screenshot({ path: `${OUT}/02-selecteur.png` });
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.0 · Conçu par Hugo N. · 2026 · Sauvegarde", pied);
+  verif("Pied de page", pied === "Strate v15.0 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
   verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.0").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
