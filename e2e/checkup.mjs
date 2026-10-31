@@ -53,9 +53,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.2 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.3 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.2").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.3").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
@@ -122,7 +122,7 @@ await step("Lien vers une fiche Index", async () => {
   await page.getByLabel("Rechercher une fiche dans Index").fill("isoresist"); await page.waitForTimeout(400);
   await page.locator("#ficheResults").getByRole("button", { name: /ISORESIST 1000 031 F/ }).click(); await page.waitForTimeout(300);
   const href = await page.locator("#productFiche a").getAttribute("href");
-  verif("Fiche Index liée au produit", href === "https://index-hn.lovable.app/?fiche=fiche-iso", href ?? "");
+  verif("Fiche Index liée au produit", href === "https://outils-hn.github.io/Index/?fiche=fiche-iso", href ?? "");
   verif("Lien aussi visible dans le calcul", await page.locator("#productInfo a").isVisible());
   await page.screenshot({ path: `${OUT}/07-lien-index.png`, fullPage: false });
   await c.close();
