@@ -1,0 +1,377 @@
+# Constats
+
+# Erreurs navigateur
+[hors-ligne] console : Failed to load resource: net::ERR_FAILED
+
+# Metriques
+{
+  "mesures:premier": {
+    "titre": "Strate",
+    "lang": "fr",
+    "viewportMeta": true,
+    "h1": 1,
+    "h2": 5,
+    "debordementHorizontal": false,
+    "largeurDoc": 1440,
+    "largeurFenetre": 1440,
+    "champs": 121,
+    "champsSansEtiquette": [
+      "input#tolMinus[text] ",
+      "select#sortMode[select-one] ",
+      "input#surface[text] ex. 42,5 ou 12,5*3,2+8",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] "
+    ],
+    "interactifs": 74,
+    "sansNom": [],
+    "cibles_sous_24px": 10,
+    "taillesTexte": {
+      "10": 4,
+      "11": 7,
+      "12": 27,
+      "13": 92,
+      "14": 41,
+      "15": 12,
+      "16": 1,
+      "17": 1,
+      "18": 1,
+      "30": 1
+    },
+    "tailleMin": 10,
+    "octetsTransferes": 190131,
+    "octetsJS": 140437,
+    "nbRequetes": 5,
+    "domContentLoaded": 203,
+    "load": 203,
+    "chargement_ms": 1409
+  },
+  "axe:premier": [
+    {
+      "regle": "label-content-name-mismatch",
+      "impact": "serious",
+      "aide": "Elements must have their visible text as part of their accessible name",
+      "occurrences": 1,
+      "exemple": "<summary aria-label=\"Changer d'application\">",
+      "cible": "summary[aria-label=\"Changer d'application\"]"
+    },
+    {
+      "regle": "region",
+      "impact": "moderate",
+      "aide": "All page content should be contained by landmarks",
+      "occurrences": 1,
+      "exemple": "<div class=\"toast show\" id=\"toast\">Catalogue mis à jour depuis l'équipe (1 élément)</div>",
+      "cible": "#toast"
+    },
+    {
+      "regle": "select-name",
+      "impact": "critical",
+      "aide": "Select element must have an accessible name",
+      "occurrences": 1,
+      "exemple": "<select id=\"orderSelect\" style=\"flex:1; min-width:160px\"><option value=\"o1793485445132290\" selected=\"\">Commande 1 (0 zone)</option></select>",
+      "cible": "#orderSelect"
+    }
+  ],
+  "premier:texte": "Strate Calcul Commande Catalogue Fixations Sauvegarde Guide CALCUL Produit Isover ISORESIST 1000 031 F Flumroc Test 3 Semi-rigide, 40 kg/m³, λ 0,031, 9 épaisseurs de 40 à 200 mm Mélanger 2 produits (1re couche côté mur + couches suivantes) ? Combinaisons Épaisseur la plus proche Épaisseur cible (mm) Couches max. 1 2 3 Tolérance − (mm) ? Tolérance + (mm) Classement ? Recommandé Le moins cher Produit semi-rigide : il se comprime peu, reste prudent avec la tolérance en moins. COMBINAISONS POSSIBLES",
+  "guide-etapes": 3,
+  "mesures:calcul": {
+    "titre": "Strate",
+    "lang": "fr",
+    "viewportMeta": true,
+    "h1": 1,
+    "h2": 5,
+    "debordementHorizontal": false,
+    "largeurDoc": 1440,
+    "largeurFenetre": 1440,
+    "champs": 121,
+    "champsSansEtiquette": [
+      "input#tolMinus[text] ",
+      "select#sortMode[select-one] ",
+      "input#surface[text] ex. 42,5 ou 12,5*3,2+8",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] "
+    ],
+    "interactifs": 72,
+    "sansNom": [],
+    "cibles_sous_24px": 10,
+    "taillesTexte": {
+      "10": 4,
+      "11": 7,
+      "12": 26,
+      "13": 92,
+      "14": 39,
+      "15": 8,
+      "16": 1,
+      "17": 1,
+      "30": 1
+    },
+    "tailleMin": 10,
+    "octetsTransferes": 190131,
+    "octetsJS": 140437,
+    "nbRequetes": 5,
+    "domContentLoaded": 158,
+    "load": 158,
+    "chargement_ms": 1372
+  },
+  "axe:calcul": [
+    {
+      "regle": "label-content-name-mismatch",
+      "impact": "serious",
+      "aide": "Elements must have their visible text as part of their accessible name",
+      "occurrences": 1,
+      "exemple": "<summary aria-label=\"Changer d'application\">",
+      "cible": "summary[aria-label=\"Changer d'application\"]"
+    },
+    {
+      "regle": "region",
+      "impact": "moderate",
+      "aide": "All page content should be contained by landmarks",
+      "occurrences": 1,
+      "exemple": "<div class=\"toast show\" id=\"toast\">Catalogue mis à jour depuis l'équipe (1 élément)</div>",
+      "cible": "#toast"
+    },
+    {
+      "regle": "select-name",
+      "impact": "critical",
+      "aide": "Select element must have an accessible name",
+      "occurrences": 1,
+      "exemple": "<select id=\"orderSelect\" style=\"flex:1; min-width:160px\"><option value=\"o179348544861298\" selected=\"\">Commande 1 (0 zone)</option></select>",
+      "cible": "#orderSelect"
+    }
+  ],
+  "focus": {
+    "total": 25,
+    "sansIndicateur": 0,
+    "exemples": []
+  },
+  "tabs-jusqu-au-premier-resultat": 1,
+  "cible:zero": {
+    "champ": "0",
+    "resultats": "Épaisseur cible illisible ou nulle : saisis une valeur en mm, ex. 220."
+  },
+  "cible:negatif": {
+    "champ": "-50",
+    "resultats": "Épaisseur cible illisible ou nulle : saisis une valeur en mm, ex. 220."
+  },
+  "cible:texte": {
+    "champ": "abc",
+    "resultats": "Épaisseur cible illisible ou nulle : saisis une valeur en mm, ex. 220."
+  },
+  "cible:enorme": {
+    "champ": "5000",
+    "resultats": "5'000 mm, c'est plus que le maximum faisable : 400 mm avec 2 couches (épaisseur max 200 mm). Augmente le nombre de couches ou vérifie la cible."
+  },
+  "cible:decimal": {
+    "champ": "182,5",
+    "resultats": "Aucune combinaison dans la tolérance (182,5 à 192,5 mm). En dessous 71,05 CHF/m² + Commande 180 mm 180 mm · -2.5 mm · R = 5,81 m²K/W 180 Au-dessus 79,20 CHF/m² + Commande 200 mm 200 mm · +17.5 mm · R = 6,45 m²K/W 200"
+  },
+  "cible:petit": {
+    "champ": "3",
+    "resultats": "Aucune combinaison dans la tolérance (3 à 13 mm). En dessous Rien de réalisable Au-dessus 17,30 CHF/m² + Commande 40 mm 40 mm · +37 mm · R = 1,29 m²K/W 40"
+  },
+  "surface:somme": {
+    "champ": "12,5*3,2+8",
+    "apercu": "Recommandée 120 + 100 mm 89,25 CHF/m² + Commande 220 mm, pile la cible, 2 couches 120 100 140 + 80 mm pile la cible 140 80 88,80 CHF/m² + Commande 160 + 60 mm pile la cible 160 60 88,20 CHF/m² + Commande 180 + 40 mm pile la cible 180 40 88,35 CHF/m² + Commande",
+    "calc": "= 48 m²"
+  },
+  "surface:texte": {
+    "champ": "abc",
+    "apercu": "Recommandée 120 + 100 mm 89,25 CHF/m² + Commande 220 mm, pile la cible, 2 couches 120 100 140 + 80 mm pile la cible 140 80 88,80 CHF/m² + Commande 160 + 60 mm pile la cible 160 60 88,20 CHF/m² + Commande 180 + 40 mm pile la cible 180 40 88,35 CHF/m² + Commande",
+    "calc": "Calcul illisible"
+  },
+  "surface:negatif": {
+    "champ": "-5",
+    "apercu": "Recommandée 120 + 100 mm 89,25 CHF/m² + Commande 220 mm, pile la cible, 2 couches 120 100 140 + 80 mm pile la cible 140 80 88,80 CHF/m² + Commande 160 + 60 mm pile la cible 160 60 88,20 CHF/m² + Commande 180 + 40 mm pile la cible 180 40 88,35 CHF/m² + Commande",
+    "calc": "La surface doit être supérieure à 0"
+  },
+  "surface:enorme": {
+    "champ": "99999999",
+    "apercu": "Recommandée 120 + 100 mm 89,25 CHF/m² + Commande 220 mm, pile la cible, 2 couches 120 100 140 + 80 mm pile la cible 140 80 88,80 CHF/m² + Commande 160 + 60 mm pile la cible 160 60 88,20 CHF/m² + Commande 180 + 40 mm pile la cible 180 40 88,35 CHF/m² + Commande",
+    "calc": ""
+  },
+  "surface:virgule": {
+    "champ": "42,5",
+    "apercu": "Recommandée 120 + 100 mm 89,25 CHF/m² + Commande 220 mm, pile la cible, 2 couches 120 100 140 + 80 mm pile la cible 140 80 88,80 CHF/m² + Commande 160 + 60 mm pile la cible 160 60 88,20 CHF/m² + Commande 180 + 40 mm pile la cible 180 40 88,35 CHF/m² + Commande",
+    "calc": ""
+  },
+  "commande:texte": "Strate Calcul Commande Catalogue Fixations Sauvegarde Guide CALCUL Produit Isover ISORESIST 1000 031 F Flumroc Test 3 Semi-rigide, 40 kg/m³, λ 0,031, 9 épaisseurs de 40 à 200 mm Mélanger 2 produits (1re couche côté mur + couches suivantes) ? Combinaisons Épaisseur la plus proche Épaisseur cible (mm) Couches max. 1 2 3 Tolérance − (mm) ? Tolérance + (mm) Classement ? Recommandé Le moins cher Produit semi-rigide : il se comprime peu, reste prudent avec la tolérance en moins. COMBINAISONS POSSIBLES Toutes à 220 mm · R = 7,10 m²K/W Surface à isoler (m²) ? Façade (facultatif) Étage (facultatif) Recommandée 120 + 100 mm 89,25 CHF/m² + Commande 220 mm, pile la cible, 2 couches 120 100 140 + 80 mm p",
+  "commande:boutons": "Guide | ? | Combinaisons | Épaisseur la plus proche | ? | ? | ? | + Commande | + Commande | + Commande | + Commande | Sauvegarder | Restaurer | Nouvelle | Renommer | Supprimer | ✕ | Copier pour Excel | Copier le récap | Bon de commande PDF | ✓ Marquer comme commandée | Tout recopier | Texte pour mail | Vider | Conçu par Hugo N.",
+  "commande:apres-rechargement": "Strate Calcul Commande Catalogue Fixations Sauvegarde Guide CALCUL Produit Isover ISORESIST 1000 031 F Flumroc Test 3 Semi-rigide, 40 kg/m³, λ 0,031, 9 épaisseurs de 40 à 200 mm Mélanger 2 produits (1re couche côté mur + couches suivantes) ? Combinaisons Épaisseur la plus proche Épaisseur cible (mm)",
+  "import:apercu": "Importer un tableau Colle ici le tableau de la fiche technique : copié depuis le PDF, depuis Excel ou depuis Power Query. Ignorer Épaisseur (mm) m² / colis Prix CHF/m² Colis / palette Ignorer Épaisseur (mm) m² / colis Prix CHF/m² Colis / palette Ignorer Épaisseur (mm) m² / colis Prix CHF/m² Colis / palette 100 3 abc 120 -2 48 140 2,4 56 Destination Nouveau produit Mettre à jour : Isover ISORESIST 1000 031 F Mettre à jour : Flumroc Test 3 Nom du produit Masse volumique (kg/m³) Type Souple Semi-ri",
+  "mesures:mobile": {
+    "titre": "Strate",
+    "lang": "fr",
+    "viewportMeta": true,
+    "h1": 1,
+    "h2": 5,
+    "debordementHorizontal": false,
+    "largeurDoc": 390,
+    "largeurFenetre": 390,
+    "champs": 121,
+    "champsSansEtiquette": [
+      "input#tolMinus[text] ",
+      "select#sortMode[select-one] ",
+      "input#surface[text] ex. 42,5 ou 12,5*3,2+8",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] "
+    ],
+    "interactifs": 72,
+    "sansNom": [],
+    "cibles_sous_24px": 10,
+    "taillesTexte": {
+      "10": 4,
+      "11": 7,
+      "12": 26,
+      "13": 92,
+      "14": 39,
+      "15": 8,
+      "16": 1,
+      "17": 1,
+      "30": 1
+    },
+    "tailleMin": 10,
+    "octetsTransferes": 190131,
+    "octetsJS": 140437,
+    "nbRequetes": 5,
+    "domContentLoaded": 144,
+    "load": 144,
+    "chargement_ms": 1358
+  },
+  "axe:mobile": [
+    {
+      "regle": "label-content-name-mismatch",
+      "impact": "serious",
+      "aide": "Elements must have their visible text as part of their accessible name",
+      "occurrences": 1,
+      "exemple": "<summary aria-label=\"Changer d'application\">",
+      "cible": "summary[aria-label=\"Changer d'application\"]"
+    },
+    {
+      "regle": "region",
+      "impact": "moderate",
+      "aide": "All page content should be contained by landmarks",
+      "occurrences": 1,
+      "exemple": "<div class=\"toast show\" id=\"toast\">Catalogue mis à jour depuis l'équipe (1 élément)</div>",
+      "cible": "#toast"
+    },
+    {
+      "regle": "select-name",
+      "impact": "critical",
+      "aide": "Select element must have an accessible name",
+      "occurrences": 1,
+      "exemple": "<select id=\"orderSelect\" style=\"flex:1; min-width:160px\"><option value=\"o1793485460380661\" selected=\"\">Commande 1 (0 zone)</option></select>",
+      "cible": "#orderSelect"
+    }
+  ],
+  "mesures:tablette": {
+    "titre": "Strate",
+    "lang": "fr",
+    "viewportMeta": true,
+    "h1": 1,
+    "h2": 5,
+    "debordementHorizontal": false,
+    "largeurDoc": 768,
+    "largeurFenetre": 768,
+    "champs": 121,
+    "champsSansEtiquette": [
+      "input#tolMinus[text] ",
+      "select#sortMode[select-one] ",
+      "input#surface[text] ex. 42,5 ou 12,5*3,2+8",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] ",
+      "input#[text] "
+    ],
+    "interactifs": 72,
+    "sansNom": [],
+    "cibles_sous_24px": 10,
+    "taillesTexte": {
+      "10": 4,
+      "11": 7,
+      "12": 26,
+      "13": 92,
+      "14": 39,
+      "15": 8,
+      "16": 1,
+      "17": 1,
+      "30": 1
+    },
+    "tailleMin": 10,
+    "octetsTransferes": 190131,
+    "octetsJS": 140437,
+    "nbRequetes": 5,
+    "domContentLoaded": 149,
+    "load": 150,
+    "chargement_ms": 1366
+  },
+  "axe:tablette": [
+    {
+      "regle": "label-content-name-mismatch",
+      "impact": "serious",
+      "aide": "Elements must have their visible text as part of their accessible name",
+      "occurrences": 1,
+      "exemple": "<summary aria-label=\"Changer d'application\">",
+      "cible": "summary[aria-label=\"Changer d'application\"]"
+    },
+    {
+      "regle": "region",
+      "impact": "moderate",
+      "aide": "All page content should be contained by landmarks",
+      "occurrences": 1,
+      "exemple": "<div class=\"toast show\" id=\"toast\">Catalogue mis à jour depuis l'équipe (1 élément)</div>",
+      "cible": "#toast"
+    },
+    {
+      "regle": "select-name",
+      "impact": "critical",
+      "aide": "Select element must have an accessible name",
+      "occurrences": 1,
+      "exemple": "<select id=\"orderSelect\" style=\"flex:1; min-width:160px\"><option value=\"o1793485462963126\" selected=\"\">Commande 1 (0 zone)</option></select>",
+      "cible": "#orderSelect"
+    }
+  ],
+  "axe:sombre": [
+    {
+      "regle": "label-content-name-mismatch",
+      "impact": "serious",
+      "aide": "Elements must have their visible text as part of their accessible name",
+      "occurrences": 1,
+      "exemple": "<summary aria-label=\"Changer d'application\">",
+      "cible": "summary[aria-label=\"Changer d'application\"]"
+    },
+    {
+      "regle": "region",
+      "impact": "moderate",
+      "aide": "All page content should be contained by landmarks",
+      "occurrences": 1,
+      "exemple": "<div class=\"toast show\" id=\"toast\">Catalogue mis à jour depuis l'équipe (1 élément)</div>",
+      "cible": "#toast"
+    },
+    {
+      "regle": "select-name",
+      "impact": "critical",
+      "aide": "Select element must have an accessible name",
+      "occurrences": 1,
+      "exemple": "<select id=\"orderSelect\" style=\"flex:1; min-width:160px\"><option value=\"o1793485465573621\" selected=\"\">Commande 1 (0 zone)</option></select>",
+      "cible": "#orderSelect"
+    }
+  ],
+  "hors-ligne:texte": "Strate Calcul Commande Catalogue Fixations Sauvegarde Guide CALCUL Produit Isover ISORESIST 1000 031 F Semi-rigide, 40 kg/m³, λ 0,031, 9 épaisseurs de 40 à 200 mm Mélanger 2 produits (1re couche côté mur + couches suivantes) ? Combinaisons Épaisseur la plus proche Épaisseur cible (mm) Couches max. 1 2 3 Tolérance − (mm) ? Tolérance + (mm) Classement ? Recommandé Le moins cher Produit semi-rigide :"
+}
