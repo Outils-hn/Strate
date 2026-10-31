@@ -23,6 +23,7 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **V14** : style « Épure » de la famille (Format, Index, Linear, Masse, Trame) avec le jaune laine de verre comme couleur propre, sélecteur des 6 applis, pied de page avec « À propos » ; champs qui acceptent « 1'200 », virgule ou point ; tolérance négative, cible hors catalogue et surface négative signalées ; bon de commande PDF au style Épure avec police embarquée (m² correct) ; check-up automatique dans un navigateur.
 - **V15** : catalogue commun à l'équipe (produits avec prix, m²/colis et colis/palette, systèmes de fixation) dans la base de Masse ; lecture libre, partage protégé par le PIN de Masse ; modifications locales gardées tant qu'elles ne sont pas envoyées ; sans réseau, Strate continue avec la copie du poste. Script SQL : `supabase/strate-catalogue.sql` (à exécuter une fois).
 - **V15.1** : chaque produit peut être lié à sa fiche technique dans Index (recherche dans la bibliothèque, lien partagé avec le catalogue commun, ouverture directe de la fiche).
+- **V15.2** : publication sur GitHub Pages sous `https://outils-hn.github.io/Strate/` (compte renommé `outils-hn`) ; adresses de l'Accueil et de Trame mises à jour dans le sélecteur d'applis et le lien « Suggestion / bug ».
 - Le catalogue (m²/colis, colis/palette et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
 ## Organisation du code
