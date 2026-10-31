@@ -1,0 +1,30 @@
+# Audit UX (valeurs fictives) ; resultat publie sur la branche captures/audit-ux
+name: Audit UX
+on:
+  push:
+    branches: [audit-ux]
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock playwright@1.48.2 @axe-core/playwright && npx playwright install --with-deps chromium
+      - name: Lancer l'appli et auditer
+        run: |
+          mkdir -p out
+          (python3 -m http.server 8090 > /dev/null 2>&1 &)
+          sleep 2
+          node e2e/audit.mjs out || echo "audit termine avec erreur" > out/ERREUR.txt
+      - name: Publier
+        run: |
+          cd out
+          git init -q -b captures/audit-ux
+          git config user.name "github-actions"; git config user.email "github-actions@users.noreply.github.com"
+          git add -A && git commit -qm "Audit UX ($GITHUB_SHA)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/captures/audit-ux
