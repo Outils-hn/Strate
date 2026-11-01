@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=15.4">
+<link rel="stylesheet" href="styles.css?v=15.5">
 </head>
 <body>
 <header class="topbar">
@@ -54,6 +54,12 @@
     <button class="pill" id="themeBtn" title="Changer de thème"></button>
   </div>
 </header>
+
+<div id="backupReminder" class="reminder" role="status" hidden>
+  <span id="backupReminderText"></span>
+  <button type="button" class="btn small primary" id="backupReminderNow">Sauvegarder maintenant</button>
+  <button type="button" class="btn small ghost" id="backupReminderLater">Plus tard</button>
+</div>
 
 <main>
   <div class="col-main">
@@ -278,7 +284,7 @@
   <section class="card" id="orderCard">
     <h2>Commande</h2>
     <div class="row" style="margin-top:0; margin-bottom:8px">
-      <select id="orderSelect" style="flex:1; min-width:160px"></select>
+      <select id="orderSelect" aria-label="Commande en cours" style="flex:1; min-width:160px"></select>
       <button class="btn small" id="newOrderBtn">Nouvelle</button>
       <button class="btn small" id="renameOrderBtn">Renommer</button>
       <button class="btn small ghost" id="deleteOrderBtn">Supprimer</button>
@@ -335,7 +341,7 @@
   </div>
 </main>
 
-<footer>Strate v15.4 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a> · <a href="https://outils-hn.github.io/?app=Strate&amp;v=15.4&amp;page=%2FStrate%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Strate v15.5 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a> · <a href="https://outils-hn.github.io/?app=Strate&amp;v=15.5&amp;page=%2FStrate%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -351,7 +357,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=15.4"></script>
-<script src="js/app.js?v=15.4"></script>
+<script src="js/core.js?v=15.5"></script>
+<script src="js/app.js?v=15.5"></script>
 </body>
 </html>

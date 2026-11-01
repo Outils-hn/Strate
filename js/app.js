@@ -134,7 +134,8 @@ function rText(c) {
 function diffLabel(total, target) {
   const d = total - target;
   if (d === 0) return "pile la cible";
-  return d > 0 ? `+${d} mm` : `${d} mm`;
+  // Nombres a la suisse : virgule decimale et vrai signe moins (−2,5 mm)
+  return d > 0 ? `+${fmt0(d)} mm` : `−${fmt0(-d)} mm`;
 }
 
 function addButton(c, primary = false) {
@@ -218,7 +219,9 @@ function renderResults() {
     const ok = sortCombos(combos.filter(c => c.total >= lo && c.total <= hi), target, byPrice).slice(0, 8);
     const tolNote = tolBad.length ? `<p class="empty">Tolérance négative ou illisible : comptée comme 0 mm.</p>` : "";
     if (!ok.length) {
-      res.innerHTML = tolNote + `<p class="empty">Aucune combinaison dans la tolérance (${fmt0(lo)} à ${fmt0(hi)} mm).</p>` + nearestHtml(combos, target);
+      const mini = Math.min(...thick);
+      const miniNote = target < mini ? ` Le produit commence à ${fmt0(mini)} mm.` : "";
+      res.innerHTML = tolNote + `<p class="empty">Aucune combinaison dans la tolérance (${fmt0(lo)} à ${fmt0(hi)} mm).${miniNote}</p>` + nearestHtml(combos, target);
       return;
     }
     // Si toutes les combinaisons ont la meme epaisseur, R est identique : on l'affiche une seule fois
@@ -251,16 +254,23 @@ function nearestHtml(combos, target) {
 }
 
 
+/** Au-dela, la surface est presque sûrement une erreur de saisie (m² confondus avec des mm²...). */
+const SURFACE_MAX_PLAUSIBLE = 5000;
+
 function renderSurfaceCalc() {
   const raw = $("surface").value;
   const v = evalSurface(raw);
   const isPlain = /^\s*\d+([.,]\d+)?\s*$/.test(raw);
   const bad = v != null && !isNaN(v) && v <= 0;
   $("surface").classList.toggle("field-bad", bad || (v != null && isNaN(v)));
-  $("surfaceCalc").textContent = bad ? "La surface doit être supérieure à 0" : v == null || isPlain ? "" : isNaN(v) ? "Calcul illisible" : `= ${fmt0(v)} m²`;
+  const enorme = v != null && !isNaN(v) && v > SURFACE_MAX_PLAUSIBLE;
+  $("surfaceCalc").classList.toggle("warn-surface", enorme);
+  $("surfaceCalc").textContent = bad ? "La surface doit être supérieure à 0"
+    : enorme ? `${isPlain ? "" : `= ${fmt0(v)} m² · `}Surface inhabituelle (plus de ${fmt0(SURFACE_MAX_PLAUSIBLE)} m²) : vérifie l'unité`
+    : v == null || isPlain ? "" : isNaN(v) ? "Calcul illisible" : `= ${fmt0(v)} m²`;
 }
 
-function addToOrder(layers, prods) {
+async function addToOrder(layers, prods) {
   const surface = evalSurface($("surface").value);
   if (!surface || isNaN(surface) || surface <= 0) {
     $("surface").focus();
@@ -268,6 +278,7 @@ function addToOrder(layers, prods) {
     toast(!raw ? "Saisis d'abord la surface à isoler" : isNaN(surface) ? "Surface illisible : ex. 42,5 ou 12,5*3,2+8" : "La surface doit être supérieure à 0");
     return;
   }
+  if (surface > SURFACE_MAX_PLAUSIBLE && !(await confirmModal("Surface inhabituelle", `${fmt0(surface)} m² : c'est plus de ${fmt0(SURFACE_MAX_PLAUSIBLE)} m². Vérifie l'unité avant d'ajouter à la commande.`, "Ajouter quand même"))) return;
   const p = productById(prods[0]) || currentProduct();
   curOrder().lines.push({
     id: "l" + Date.now(),
@@ -1579,7 +1590,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.4</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.5</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1624,7 +1635,27 @@ $("themeBtn").addEventListener("click", () => {
 applyTheme(currentTheme());
 
 
+// Rappel : des lignes en commande et aucune sauvegarde depuis plus de 7 jours (ou jamais)
+const RAPPEL_JOURS = 7;
+function renderBackupReminder() {
+  const el = $("backupReminder");
+  if (!el) return;
+  const lignes = state.orders.reduce((s, o) => s + o.lines.length, 0);
+  let jours = Infinity;
+  if (state.lastBackup) jours = Math.floor((Date.now() - new Date(state.lastBackup + "T00:00:00").getTime()) / 86400000);
+  let reporte = false;
+  try { reporte = sessionStorage.getItem("strate.rappel") === "1"; } catch (e) { /* stockage indisponible */ }
+  const afficher = lignes > 0 && jours >= RAPPEL_JOURS && !reporte;
+  el.hidden = !afficher;
+  if (afficher) $("backupReminderText").textContent = state.lastBackup
+    ? `Dernière sauvegarde il y a ${jours} jours : tes commandes ne sont que dans ce navigateur.`
+    : "Aucune sauvegarde pour l'instant : tes commandes ne sont que dans ce navigateur.";
+}
+$("backupReminderNow")?.addEventListener("click", () => $("backupBtn").click());
+$("backupReminderLater")?.addEventListener("click", () => { try { sessionStorage.setItem("strate.rappel", "1"); } catch (e) { /* rien */ } renderBackupReminder(); });
+
 function renderBackupHint() {
+  renderBackupReminder();
   const n = state.orders.reduce((s, o) => s + o.lines.length, 0);
   const last = state.lastBackup ? `Dernière sauvegarde : ${frDate(state.lastBackup)}.` : "Aucune sauvegarde pour l'instant.";
   $("backupHint").textContent = `${last} Tes données (${state.products.length} produit${state.products.length > 1 ? "s" : ""}, ${state.orders.length} commande${state.orders.length > 1 ? "s" : ""}, ${n} zone${n > 1 ? "s" : ""}) ne vivent que dans ce navigateur : sauvegarde-les dans un fichier de temps en temps.`;

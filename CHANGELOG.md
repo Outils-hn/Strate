@@ -4,6 +4,13 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.5 — 1er novembre 2026
+
+- Nouveauté : sur téléphone, les cinq rubriques de Strate sont dans une barre fixe en bas de l'écran, et un bandeau rappelle de sauvegarder quand la dernière sauvegarde date de plus de 7 jours.
+- Une surface de plus de 5'000 m² est signalée (« vérifie l'unité ») et demande une confirmation avant l'ajout à la commande.
+- Les écarts s'écrivent à la suisse (« −2,5 mm ») ; quand la cible est sous le minimum du produit, le message le dit.
+- Le champ « Commande en cours » a un nom pour les lecteurs d'écran ; textes de 12 px minimum, boutons plus grands sur téléphone.
+
 ## 15.4 — 1er novembre 2026
 
 - Nouveauté : le mode clair ou sombre que tu choisis dans une appli est repris dans toutes les autres, et le mode « auto » disparaît : il n'y a plus que clair ou sombre.
