@@ -374,6 +374,7 @@ function priceDateNote(rows) {
 }
 
 function renderOrder() {
+  renderBackupReminder();
   renderOrderPicker();
   const lines = curOrder().lines;
   $("orderActions").classList.toggle("hidden", !lines.length);
