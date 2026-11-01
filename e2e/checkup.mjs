@@ -53,9 +53,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.4 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.5 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.4").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.5").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
@@ -84,6 +84,16 @@ await step("Ecran principal", async () => {
   await taper(page, "surface", "12,5*3,2+8"); await page.fill("#facade", "Sud"); await page.fill("#etage", "RDC");
   await page.getByRole("button", { name: "+ Commande" }).first().click(); await page.waitForTimeout(300);
   verif("Commande : 2 zones", /2 zones/.test(await page.locator("#orderCard").innerText()));
+  verif("Rappel de sauvegarde affiche (commande, jamais sauvegardee)", await page.locator("#backupReminder").isVisible());
+  await page.getByRole("button", { name: "Plus tard" }).click();
+  verif("Rappel de sauvegarde : « Plus tard » le masque", !(await page.locator("#backupReminder").isVisible()));
+  await taper(page, "surface", "99999999");
+  verif("Surface énorme : avertissement", /Surface inhabituelle/.test(await page.locator("#surfaceCalc").innerText()));
+  await page.getByRole("button", { name: "+ Commande" }).first().click(); await page.waitForTimeout(300);
+  verif("Surface énorme : confirmation demandée", await page.locator("#modal").getByText("Surface inhabituelle").isVisible());
+  await page.locator("#modal").getByRole("button", { name: "Annuler" }).click().catch(() => page.keyboard.press("Escape")); await page.waitForTimeout(200);
+  await taper(page, "surface", "12,5*3,2+8");
+  verif("Champ de commande nommé", (await page.locator("#orderSelect").getAttribute("aria-label")) === "Commande en cours");
   await page.screenshot({ path: `${OUT}/04-commande.png`, fullPage: true });
   const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 20000 }), page.click("#pdfBtn")]);
   await dl.saveAs(`${OUT}/bon.pdf`);
@@ -140,6 +150,24 @@ await step("Mode sombre", async () => {
   const { c, page } = await ctx({ dark: true });
   verif("Mode sombre retenu", (await page.evaluate(() => document.documentElement.dataset.theme)) === "dark");
   await page.screenshot({ path: `${OUT}/05-sombre.png`, fullPage: true });
+  await c.close();
+});
+
+// Telephone (390 px) : barre d'onglets en bas, pas de debordement, cibles assez grandes
+await step("Telephone", async () => {
+  const c = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await c.route(/supabase\.co/, (r) => r.abort());
+  const page = await c.newPage();
+  await page.goto(BASE, { waitUntil: "networkidle" }); await page.waitForTimeout(500);
+  const m = await page.evaluate(() => {
+    const nav = document.querySelector(".topnav").getBoundingClientRect();
+    const petits = [...document.querySelectorAll(".topnav a, #guideBtn, main button.btn:not([hidden])")].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height < 36; }).map((e) => e.textContent.trim().slice(0, 20));
+    return { debord: document.documentElement.scrollWidth - window.innerWidth, navBas: Math.abs(nav.bottom - window.innerHeight) < 2, navLarge: nav.width >= window.innerWidth - 2, petits };
+  });
+  verif("Telephone : pas de debordement horizontal", m.debord <= 0, `${m.debord} px`);
+  verif("Telephone : les 5 rubriques en barre fixe en bas", m.navBas && m.navLarge);
+  verif("Telephone : boutons assez grands", m.petits.length === 0, m.petits.join(", "));
+  await page.screenshot({ path: `${OUT}/50-telephone.png` });
   await c.close();
 });
 
