@@ -2,6 +2,13 @@
 
 Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'ici dans le `README.md`.
 
+Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
+
+## 15.4 — 1er novembre 2026
+
+- Nouveauté : le mode clair ou sombre que tu choisis dans une appli est repris dans toutes les autres, et le mode « auto » disparaît : il n'y a plus que clair ou sombre.
+- Le réglage est enregistré dans une clé commune à toutes les applis (`outils-theme`, même site) ; la clé `strate.theme` est conservée. Tant que rien n'est choisi, Strate part du réglage de l'ordinateur.
+
 ## 15.3 — 31 octobre 2026
 
 - Sélecteur d'applis et liens vers les fiches d'Index sur GitHub Pages (`https://outils-hn.github.io/<Appli>/`) à la place des adresses Lovable.

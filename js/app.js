@@ -1579,7 +1579,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.3</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.4</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1589,25 +1589,28 @@ document.addEventListener("click", e => { const m = $("appsMenu"); if (m.open &&
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("appsMenu").open) { $("appsMenu").open = false; $("appsMenu").querySelector("summary").focus(); } });
 
 // ===== Theme clair / sombre =====
-// "Auto" suit le reglage du systeme ; Clair et Sombre le forcent.
+// Clair ou sombre. Le choix est commun a toutes les applis (cle « outils-theme », meme site) ;
+// tant qu'il n'y en a pas, on part du reglage de l'ordinateur.
 const THEMES = [
-  { key: "auto", label: "Thème auto" },
   { key: "light", label: "Thème clair" },
   { key: "dark", label: "Thème sombre" }
 ];
 const THEME_ICONES = {
-  auto: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg>',
   light: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
   dark: '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
 };
 function currentTheme() {
-  try { return localStorage.getItem("strate.theme") || "auto"; } catch (e) { return document.documentElement.dataset.theme || "auto"; }
+  try {
+    const t = localStorage.getItem("outils-theme") || localStorage.getItem("strate.theme");
+    if (t === "light" || t === "dark") return t;
+  } catch (e) { /* stockage bloque */ }
+  // Ancien mode « auto » ou rien de choisi : reglage de l'ordinateur
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 function applyTheme(key) {
-  if (key === "auto") delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = key;
-  try { localStorage.setItem("strate.theme", key); } catch (e) {}
-  // Bouton icone (comme les autres applis) : auto = demi-cercle, clair = soleil, sombre = lune
+  document.documentElement.dataset.theme = key;
+  try { localStorage.setItem("strate.theme", key); localStorage.setItem("outils-theme", key); } catch (e) {}
+  // Bouton icone (comme les autres applis) : clair = soleil, sombre = lune
   const t = THEMES.find(t => t.key === key);
   const btn = $("themeBtn");
   btn.innerHTML = THEME_ICONES[key];
