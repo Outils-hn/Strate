@@ -25,6 +25,7 @@ Petite appli web pour trouver quelles épaisseurs d'isolation empiler afin d'att
 - **V15.1** : chaque produit peut être lié à sa fiche technique dans Index (recherche dans la bibliothèque, lien partagé avec le catalogue commun, ouverture directe de la fiche).
 - **V15.2** : publication sur GitHub Pages sous `https://outils-hn.github.io/Strate/` (compte renommé `outils-hn`) ; adresses de l'Accueil et de Trame mises à jour dans le sélecteur d'applis et le lien « Suggestion / bug ».
 - **V15.3** : sélecteur d'applis et liens vers les fiches d'Index sur GitHub Pages (`https://outils-hn.github.io/<Appli>/`) à la place des adresses Lovable.
+- **V15.4** : réglage clair / sombre commun à toutes les applis ; le mode « Auto » est retiré (clair ou sombre seulement).
 - Le catalogue (m²/colis, colis/palette et prix par épaisseur inclus), la commande et les dernières saisies sont gardés dans le navigateur.
 
 ## Organisation du code

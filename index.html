@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Strate</title>
 <script>
-  // Theme choisi (auto / clair / sombre), applique avant l'affichage
-  try { const t = localStorage.getItem("strate.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+  // Theme choisi (reglage commun aux applis, puis celui de Strate), applique avant l'affichage
+  try { const t = localStorage.getItem("outils-theme") || localStorage.getItem("strate.theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
 <meta name="description" content="Combinaisons d'epaisseurs d'isolation et commande">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=15.3">
+<link rel="stylesheet" href="styles.css?v=15.4">
 </head>
 <body>
 <header class="topbar">
@@ -335,7 +335,7 @@
   </div>
 </main>
 
-<footer>Strate v15.3 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a> · <a href="https://outils-hn.github.io/?app=Strate&amp;v=15.3&amp;page=%2FStrate%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Strate v15.4 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a> · <a href="https://outils-hn.github.io/?app=Strate&amp;v=15.4&amp;page=%2FStrate%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -351,7 +351,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=15.3"></script>
-<script src="js/app.js?v=15.3"></script>
+<script src="js/core.js?v=15.4"></script>
+<script src="js/app.js?v=15.4"></script>
 </body>
 </html>
