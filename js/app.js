@@ -927,8 +927,8 @@ $("clearOrderBtn").addEventListener("click", async () => {
   curOrder().lines = [];
   renderOrder(); saveState();
 });
-$("copyExcelBtn").addEventListener("click", () => copyZones(false));
-$("copyAllBtn").addEventListener("click", () => copyZones(true));
+$("copyExcelBtn").addEventListener("click", async () => { if (await allowExport()) copyZones(false); });
+$("copyAllBtn").addEventListener("click", async () => { if (await allowExport()) copyZones(true); });
 $("copyRecapBtn").addEventListener("click", async () => {
   const ok = await copyRich(recapClipboard());
   toast(ok ? "Récap copié, colle-le dans Excel" : "Copie impossible sur ce navigateur");
@@ -1383,8 +1383,9 @@ async function exportPdf() {
   }
 }
 
-$("pdfBtn").addEventListener("click", () => {
+$("pdfBtn").addEventListener("click", async () => {
   if (!curOrder().lines.length) return;
+  if (!(await allowExport())) return;
   exportPdf();
 });
 
@@ -1591,7 +1592,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.7</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.8</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1662,7 +1663,8 @@ function renderBackupHint() {
   $("backupHint").textContent = `${last} Tes données (${state.products.length} produit${state.products.length > 1 ? "s" : ""}, ${state.orders.length} commande${state.orders.length > 1 ? "s" : ""}, ${n} zone${n > 1 ? "s" : ""}) ne vivent que dans ce navigateur : sauvegarde-les dans un fichier de temps en temps.`;
 }
 
-$("backupBtn").addEventListener("click", () => {
+$("backupBtn").addEventListener("click", async () => {
+  if (!(await allowExport())) return;
   state.lastBackup = todayIso();
   saveState();
   const data = { app: "strate", version: 5, savedAt: new Date().toISOString(), state };
@@ -1975,7 +1977,35 @@ async function ensureLogin() {
   syncShared();
   return true;
 }
-function logOut() { writeSession(null); toast("Déconnecté"); renderShared(); }
+function logOut() { writeSession(null); toast("Déconnecté"); renderShared(); renderAccount(); }
+
+// Etat du compte en haut de page (comme dans Index) ; la connexion est partagee avec les autres applis
+function renderAccount() {
+  const sess = readSession();
+  $("accountState").textContent = sess ? `Connecté · ${sess.user?.email || ""}` : "Lecture seule";
+  $("accountState").classList.toggle("on", !!sess);
+  $("accountBtn").textContent = sess ? "Se déconnecter" : "Se connecter";
+}
+$("accountBtn").addEventListener("click", () => { if (readSession()) logOut(); else ensureLogin().then(renderAccount); });
+window.addEventListener("storage", e => { if (e.key === SESSION_KEY) { renderAccount(); renderShared(); } });
+
+// Exports (PDF, copie Excel, sauvegarde) : libres avec un compte ; sans compte, 3 exports de decouverte
+// puis connexion demandee. Incitation seulement (compteur dans le navigateur).
+const FREE_EXPORTS = 3, FREE_KEY = "outils.strate.exports";
+async function allowExport() {
+  if (readSession()) return true;
+  let done = 0;
+  try { done = Number(localStorage.getItem(FREE_KEY)) || 0; } catch (e) {}
+  if (done < FREE_EXPORTS) {
+    try { localStorage.setItem(FREE_KEY, String(done + 1)); } catch (e) {}
+    toast(`Export gratuit ${done + 1}/${FREE_EXPORTS} · connecte-toi pour des exports illimités`);
+    return true;
+  }
+  toast("Les 3 exports de découverte sont utilisés : connecte-toi pour continuer");
+  const ok = await ensureLogin();
+  renderAccount();
+  return ok;
+}
 
 function fillMissingPrices(kind, item, full) {
   if (kind === "produit") {
@@ -2145,4 +2175,5 @@ renderCatalog();
 renderOrder();
 renderBackupHint();
 renderShared();
+renderAccount();
 syncShared();
