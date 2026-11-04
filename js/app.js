@@ -1591,7 +1591,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.5</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.6</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1856,11 +1856,11 @@ $("doImportBtn").addEventListener("click", () => {
 });
 
 // ===== Catalogue commun a l'equipe =====
-// Produits (prix, colis, palettes compris) et systemes de fixation partages via la base de Masse
-// (Supabase, Francfort). Lecture libre ; envoi et retrait proteges par le PIN de Masse.
+// Produits (prix, colis, palettes compris) et systemes de fixation partages via la base d'Index (la meme que Masse et Format)
+// (Supabase, Francfort). Lecture libre ; envoi et retrait proteges par le PIN commun (celui de Masse).
 // Sans reseau, Strate continue avec la copie de ce poste. Logique de fusion : core.js (testee).
-const SB_URL = "https://kkxqgdljkvuapryqydcx.supabase.co";
-const SB_KEY = "sb_publishable_xAvqc9Z9clDeBJi_MVsh_g_-oRKBSqK"; // cle PUBLIQUE, faite pour une page web
+const SB_URL = "https://ngfzwfbraqkdcocdcmib.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZnp3ZmJyYXFrZGNvY2RjbWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzg2NTcsImV4cCI6MjA5NTIxNDY1N30.Ikovcm4eWkLvPO_PvkI8C8DJebBT011Rz87k_EYFdbU"; // cle PUBLIQUE, faite pour une page web
 const BASE_KEY = "strate.shared.base";
 const PIN_KEY = "strate-pin";
 const shared = { state: "sync", at: null };
