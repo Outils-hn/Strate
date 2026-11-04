@@ -1592,7 +1592,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.8</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.9</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1982,7 +1982,7 @@ function logOut() { writeSession(null); toast("Déconnecté"); renderShared(); r
 // Etat du compte en haut de page (comme dans Index) ; la connexion est partagee avec les autres applis
 function renderAccount() {
   const sess = readSession();
-  $("accountState").textContent = sess ? `Connecté · ${sess.user?.email || ""}` : "Lecture seule";
+  $("accountState").textContent = sess ? (sess.user?.email || "") : "Lecture seule";
   $("accountState").classList.toggle("on", !!sess);
   $("accountBtn").textContent = sess ? "Se déconnecter" : "Se connecter";
 }
@@ -2071,7 +2071,7 @@ function sharedRowHtml(kind, item) {
     : shared.state === "offline" ? `Hors ligne · <button data-sh="sync">Réessayer</button>`
     : `À jour à ${shared.at.toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })} · <button data-sh="sync">Actualiser</button>`;
   const sess = readSession();
-  const who = sess ? `Connecté · ${escapeHtml(sess.user?.email || "")} · <button data-sh="logout">Se déconnecter</button>` : `Lecture seule, sans prix · <button data-sh="login">Se connecter</button>`;
+  const who = sess ? `${escapeHtml(sess.user?.email || "")} · <button data-sh="logout">Se déconnecter</button>` : `Lecture seule, sans prix · <button data-sh="login">Se connecter</button>`;
   return `<span class="dot ${st}" aria-hidden="true"></span><span class="what">${label}</span>${shared.state === "offline" && st !== "local" ? "" : btns}<span class="sync">${sync} · ${who}</span>`;
 }
 function renderShared() {

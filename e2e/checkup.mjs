@@ -63,9 +63,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.8 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.9 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.8").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.9").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
@@ -151,7 +151,7 @@ await step("Comptes : bandeau et 3 exports gratuits", async () => {
   await page.locator('#modalFields input[type="password"]').fill("bon");
   const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 8000 }).catch(() => null), page.locator("#modalButtons .primary").click()]);
   verif("Apres connexion : la sauvegarde part", !!dl);
-  verif("Bandeau : « Connecté · email »", (await page.locator("#accountState").innerText()) === "Connecté · hugo@test.fr" && (await page.locator("#accountBtn").innerText()) === "Se déconnecter");
+  verif("Bandeau : email seul", (await page.locator("#accountState").innerText()) === "hugo@test.fr" && (await page.locator("#accountBtn").innerText()) === "Se déconnecter");
   await page.locator("#accountBtn").click(); await page.waitForTimeout(300);
   verif("Deconnexion : retour en lecture seule", (await page.locator("#accountState").innerText()) === "Lecture seule");
   await c.close();
