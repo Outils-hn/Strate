@@ -143,7 +143,7 @@ await step("Comptes : bandeau et 3 exports gratuits", async () => {
   const { c, page } = await ctx();
   await page.waitForTimeout(500);
   verif("Bandeau : « Lecture seule » + Se connecter", await page.locator("#accountState").innerText() === "Lecture seule" && await page.locator("#accountBtn").innerText() === "Se connecter");
-  await page.evaluate(() => localStorage.setItem("strate.exports.libres", "3"));
+  await page.evaluate(() => localStorage.setItem("outils.strate.exports", "3"));
   await page.locator("#backupBtn").scrollIntoViewIfNeeded();
   await page.locator("#backupBtn").click(); await page.waitForTimeout(400);
   verif("Apres 3 exports : la connexion est demandee", await page.locator("#modal").getByText("Connexion").first().isVisible());

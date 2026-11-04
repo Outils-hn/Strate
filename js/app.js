@@ -1991,7 +1991,7 @@ window.addEventListener("storage", e => { if (e.key === SESSION_KEY) { renderAcc
 
 // Exports (PDF, copie Excel, sauvegarde) : libres avec un compte ; sans compte, 3 exports de decouverte
 // puis connexion demandee. Incitation seulement (compteur dans le navigateur).
-const FREE_EXPORTS = 3, FREE_KEY = "strate.exports.libres";
+const FREE_EXPORTS = 3, FREE_KEY = "outils.strate.exports";
 async function allowExport() {
   if (readSession()) return true;
   let done = 0;
