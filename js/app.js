@@ -1592,7 +1592,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.9</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.10</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1647,7 +1647,7 @@ function renderBackupReminder() {
   if (state.lastBackup) jours = Math.floor((Date.now() - new Date(state.lastBackup + "T00:00:00").getTime()) / 86400000);
   let reporte = false;
   try { reporte = sessionStorage.getItem("strate.rappel") === "1"; } catch (e) { /* stockage indisponible */ }
-  const afficher = lignes > 0 && jours >= RAPPEL_JOURS && !reporte;
+  const afficher = !!readSession() && lignes > 0 && jours >= RAPPEL_JOURS && !reporte; // sans compte : pas de sauvegarde JSON, donc pas de rappel
   el.hidden = !afficher;
   if (afficher) $("backupReminderText").textContent = state.lastBackup
     ? `Dernière sauvegarde il y a ${jours} jours : tes commandes ne sont que dans ce navigateur.`
@@ -1664,7 +1664,7 @@ function renderBackupHint() {
 }
 
 $("backupBtn").addEventListener("click", async () => {
-  if (!(await allowExport())) return;
+  if (!jsonAllowed()) return;
   state.lastBackup = todayIso();
   saveState();
   const data = { app: "strate", version: 5, savedAt: new Date().toISOString(), state };
@@ -1680,12 +1680,12 @@ $("backupBtn").addEventListener("click", async () => {
   toast("Sauvegarde téléchargée");
 });
 
-$("restoreBtn").addEventListener("click", () => $("restoreFile").click());
+$("restoreBtn").addEventListener("click", () => { if (jsonAllowed()) $("restoreFile").click(); });
 
 $("restoreFile").addEventListener("change", async e => {
   const file = e.target.files[0];
   e.target.value = "";
-  if (!file) return;
+  if (!file || !jsonAllowed()) return;
   let data;
   try {
     data = JSON.parse(await file.text());
@@ -1982,6 +1982,7 @@ function logOut() { writeSession(null); toast("Déconnecté"); renderShared(); r
 // Etat du compte en haut de page (comme dans Index) ; la connexion est partagee avec les autres applis
 function renderAccount() {
   const sess = readSession();
+  renderBackupReminder();
   $("accountState").textContent = sess ? (sess.user?.email || "") : "Lecture seule";
   $("accountState").classList.toggle("on", !!sess);
   $("accountBtn").textContent = sess ? "Se déconnecter" : "Se connecter";
@@ -1992,6 +1993,12 @@ window.addEventListener("storage", e => { if (e.key === SESSION_KEY) { renderAcc
 // Exports (PDF, copie Excel, sauvegarde) : libres avec un compte ; sans compte, 3 exports de decouverte
 // puis connexion demandee. Incitation seulement (compteur dans le navigateur).
 const FREE_EXPORTS = 3, FREE_KEY = "outils.strate.exports";
+// Fichier JSON (sauvegarde / restauration) : export ET import reserves aux comptes connectes.
+function jsonAllowed() {
+  if (readSession()) return true;
+  toast("Fichier JSON : compte requis · connecte-toi avec ton compte Index");
+  return false;
+}
 async function allowExport() {
   if (readSession()) return true;
   let done = 0;

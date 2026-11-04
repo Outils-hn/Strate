@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.10 — 4 novembre 2026
+
+- Nouveauté : sans compte, on ne peut plus télécharger ni restaurer de sauvegarde (fichier JSON) : un message invite à se connecter avec son compte Index. Les exports PDF et la copie Excel gardent leurs 3 essais gratuits. Le rappel de sauvegarde n'apparaît qu'avec un compte.
+
 ## 15.9 — 4 novembre 2026
 
 - Nouveauté : le bandeau affiche seulement l'adresse email quand on est connecté (sans « Connecté · »), comme dans toutes les autres applis.
