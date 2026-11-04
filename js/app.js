@@ -1591,7 +1591,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.6</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.7</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1857,13 +1857,14 @@ $("doImportBtn").addEventListener("click", () => {
 
 // ===== Catalogue commun a l'equipe =====
 // Produits (prix, colis, palettes compris) et systemes de fixation partages via la base d'Index (la meme que Masse et Format)
-// (Supabase, Francfort). Lecture libre ; envoi et retrait proteges par le PIN commun (celui de Masse).
+// (Supabase, Francfort). Lecture libre mais SANS les prix (les prix sont reserves aux comptes) ; envoi et retrait : compte Index valide.
 // Sans reseau, Strate continue avec la copie de ce poste. Logique de fusion : core.js (testee).
 const SB_URL = "https://ngfzwfbraqkdcocdcmib.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZnp3ZmJyYXFrZGNvY2RjbWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzg2NTcsImV4cCI6MjA5NTIxNDY1N30.Ikovcm4eWkLvPO_PvkI8C8DJebBT011Rz87k_EYFdbU"; // cle PUBLIQUE, faite pour une page web
 const BASE_KEY = "strate.shared.base";
-const PIN_KEY = "strate-pin";
-const shared = { state: "sync", at: null };
+// Meme cle de stockage qu'Index : la connexion est partagee entre les applis (meme site)
+const SESSION_KEY = "sb-ngfzwfbraqkdcocdcmib-auth-token";
+const shared = { state: "sync", at: null, anon: true };
 
 function loadBase() {
   try { const b = JSON.parse(localStorage.getItem(BASE_KEY)); return { produit: b?.produit || {}, fixation: b?.fixation || {} }; }
@@ -1872,10 +1873,47 @@ function loadBase() {
 let sharedBase = loadBase();
 function saveBase() { try { localStorage.setItem(BASE_KEY, JSON.stringify(sharedBase)); } catch (e) {} }
 
+function readSession() {
+  try { const s = JSON.parse(localStorage.getItem(SESSION_KEY)); return s && s.access_token ? s : null; } catch (e) { return null; }
+}
+function writeSession(s) {
+  try { if (s) localStorage.setItem(SESSION_KEY, JSON.stringify(s)); else localStorage.removeItem(SESSION_KEY); } catch (e) {}
+}
+const withExpiry = r => ({ ...r, expires_at: r.expires_at || Math.floor(Date.now() / 1000) + (r.expires_in || 3600) });
+// Jeton d'acces du compte (renouvele si besoin), ou null si personne n'est connecte
+async function accessToken() {
+  const s = readSession();
+  if (!s) return null;
+  if ((s.expires_at || 0) > Date.now() / 1000 + 30) return s.access_token;
+  try {
+    const r = await fetch(SB_URL + "/auth/v1/token?grant_type=refresh_token", { method: "POST", headers: { apikey: SB_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ refresh_token: s.refresh_token }) });
+    if (!r.ok) return s.access_token;
+    const n = withExpiry(await r.json());
+    writeSession(n);
+    return n.access_token;
+  } catch (e) { return s.access_token; }
+}
+async function signIn(email, password) {
+  try {
+    const r = await fetch(SB_URL + "/auth/v1/token?grant_type=password", { method: "POST", headers: { apikey: SB_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim(), password }) });
+    const j = await r.json();
+    if (!r.ok) {
+      const m = String(j.error_description || j.msg || "");
+      return /invalid login/i.test(m) ? "Email ou mot de passe incorrect." : /confirm/i.test(m) ? "Adresse email pas encore confirmée : ouvre le lien reçu par email." : (m || "Connexion impossible.");
+    }
+    writeSession(withExpiry(j));
+    return null;
+  } catch (e) { return "Pas de connexion au serveur."; }
+}
+
 async function sbFetch(path, init = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), 8000);
-  try { return await fetch(SB_URL + path, { ...init, headers: { apikey: SB_KEY, "Content-Type": "application/json" }, signal: ctrl.signal }); }
+  try {
+    const tok = await accessToken();
+    const headers = { apikey: SB_KEY, "Content-Type": "application/json", ...(tok ? { Authorization: "Bearer " + tok } : {}) };
+    return await fetch(SB_URL + path, { ...init, headers, signal: ctrl.signal });
+  }
   finally { clearTimeout(t); }
 }
 async function sbRpc(fn, args) {
@@ -1899,8 +1937,10 @@ function usedIds() {
 async function syncShared(manual = false) {
   shared.state = "sync"; renderShared();
   let rows = null;
+  const anon = !readSession();
   try {
-    const r = await sbFetch("/rest/v1/strate_catalogue?select=id,kind,data,updated_at,deleted_at");
+    // Sans compte valide, la base renvoie le catalogue SANS les prix
+    const r = await sbFetch("/rest/v1/rpc/strate_lire", { method: "POST", body: "{}" });
     if (r.ok) rows = await r.json();
   } catch (e) {}
   if (!rows) {
@@ -1915,36 +1955,57 @@ async function syncShared(manual = false) {
   state.fixSystems = ff.items;
   sharedBase = { produit: fp.base, fixation: ff.base };
   saveBase();
-  shared.state = "ok"; shared.at = new Date();
+  shared.state = "ok"; shared.at = new Date(); shared.anon = anon;
   refreshAll();
   const n = fp.updated + ff.updated;
   if (n || manual) toast(n ? `Catalogue mis à jour depuis l'équipe (${n} élément${n > 1 ? "s" : ""})` : "Catalogue commun à jour");
 }
 
-async function getPin() {
-  try { const p = sessionStorage.getItem(PIN_KEY); if (p) return p; } catch (e) {}
+// Connexion avec le compte Index (email + mot de passe). Renvoie true si un compte est connecte.
+async function ensureLogin() {
+  if (readSession()) return true;
   const r = await openModal({
-    title: "Code PIN requis",
-    text: "Le catalogue est commun à l'équipe : saisis le PIN (le même que Masse) pour le modifier pendant cette session.",
-    fields: [{ id: "pin", label: "Code PIN", type: "password", inputmode: "numeric" }],
-    buttons: [{ label: "Annuler", value: null, ghost: true }, { label: "Déverrouiller", value: "ok", primary: true }],
-    validate: async v => {
-      if (!v.pin) return "Saisis le PIN.";
-      const res = await sbRpc("verify_pin", { p_pin: v.pin });
-      return res.ok ? null : (res.error || "PIN incorrect.");
-    },
+    title: "Connexion",
+    text: "Le catalogue est commun à l'équipe : connecte-toi avec ton compte Index (mêmes email et mot de passe) pour le modifier et voir les prix. Pas encore de compte ? Crée-le dans Index, un collègue le validera.",
+    fields: [{ id: "email", label: "Email", type: "email" }, { id: "mdp", label: "Mot de passe", type: "password" }],
+    buttons: [{ label: "Annuler", value: null, ghost: true }, { label: "Se connecter", value: "ok", primary: true }],
+    validate: async v => (!v.email || !v.mdp) ? "Saisis l'email et le mot de passe." : await signIn(v.email, v.mdp),
   });
-  if (!r || r.button !== "ok") return null;
-  try { sessionStorage.setItem(PIN_KEY, r.values.pin); } catch (e) {}
-  return r.values.pin;
+  if (!r || r.button !== "ok") return false;
+  syncShared();
+  return true;
 }
-function forgetPinIf(err) { if (/PIN|essais/i.test(err || "")) { try { sessionStorage.removeItem(PIN_KEY); } catch (e) {} } }
+function logOut() { writeSession(null); toast("Déconnecté"); renderShared(); }
+
+function fillMissingPrices(kind, item, full) {
+  if (kind === "produit") {
+    for (const th of item.thicknesses || []) {
+      if (th.price != null) continue;
+      const r = (full.thicknesses || []).find(x => x.t === th.t);
+      if (r && r.price != null) th.price = r.price;
+    }
+  } else {
+    for (const a of item.articles || []) {
+      if (a.price100 != null) continue;
+      const r = (full.articles || []).find(x => x.name === a.name);
+      if (r && r.price100 != null) a.price100 = r.price100;
+    }
+  }
+}
 
 async function sendShared(kind, item) {
-  const pin = await getPin();
-  if (!pin) return;
-  const res = await sbRpc("strate_save_item", { p_pin: pin, p_kind: kind, p: item });
-  if (!res.ok) { forgetPinIf(res.error); toast(res.error || "Envoi impossible"); return; }
+  if (!(await ensureLogin())) return;
+  // Catalogue lu sans les prix : on le relit avec le compte avant d'envoyer, pour ne jamais ecraser un prix
+  if (shared.anon) {
+    await syncShared();
+    const list = kind === "produit" ? state.products : state.fixSystems;
+    item = list.find(x => x.id === item.id);
+    if (!item || sharedStatus(item, sharedBase[kind]) === "shared") { toast("Catalogue actualisé avec ton compte : rien à envoyer."); return; }
+    // Les prix absents de ta copie (masqués avant la connexion) sont repris de la version de l'équipe
+    try { fillMissingPrices(kind, item, JSON.parse(sharedBase[kind][item.id])); } catch (e) {}
+  }
+  const res = await sbRpc("strate_save_item", { p_kind: kind, p: item });
+  if (!res.ok) { toast(res.error || "Envoi impossible"); return; }
   sharedBase[kind][item.id] = stable(item); saveBase();
   toast(`« ${item.name} » est maintenant commun à l'équipe`);
   renderShared();
@@ -1953,10 +2014,9 @@ async function unshare(kind, item) {
   if (!(await confirmModal(`Retirer « ${item.name} » du catalogue commun ?`,
     "Il reste sur ce poste. Chez les collègues, il disparaîtra à la prochaine ouverture (sauf s'il sert à une de leurs commandes).",
     "Retirer", true))) return;
-  const pin = await getPin();
-  if (!pin) return;
-  const res = await sbRpc("strate_delete_item", { p_pin: pin, p_id: item.id });
-  if (!res.ok) { forgetPinIf(res.error); toast(res.error || "Retrait impossible"); return; }
+  if (!(await ensureLogin())) return;
+  const res = await sbRpc("strate_delete_item", { p_id: item.id });
+  if (!res.ok) { toast(res.error || "Retrait impossible"); return; }
   delete sharedBase[kind][item.id]; saveBase();
   toast(`« ${item.name} » est retiré du catalogue commun`);
   renderShared();
@@ -1980,7 +2040,9 @@ function sharedRowHtml(kind, item) {
   const sync = shared.state === "sync" ? "Synchronisation…"
     : shared.state === "offline" ? `Hors ligne · <button data-sh="sync">Réessayer</button>`
     : `À jour à ${shared.at.toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })} · <button data-sh="sync">Actualiser</button>`;
-  return `<span class="dot ${st}" aria-hidden="true"></span><span class="what">${label}</span>${shared.state === "offline" && st !== "local" ? "" : btns}<span class="sync">${sync}</span>`;
+  const sess = readSession();
+  const who = sess ? `Connecté · ${escapeHtml(sess.user?.email || "")} · <button data-sh="logout">Se déconnecter</button>` : `Lecture seule, sans prix · <button data-sh="login">Se connecter</button>`;
+  return `<span class="dot ${st}" aria-hidden="true"></span><span class="what">${label}</span>${shared.state === "offline" && st !== "local" ? "" : btns}<span class="sync">${sync} · ${who}</span>`;
 }
 function renderShared() {
   $("sharedProduct").innerHTML = sharedRowHtml("produit", currentProduct());
@@ -1992,6 +2054,8 @@ function renderShared() {
     if (!b) return;
     const act = b.dataset.sh, item = cur();
     if (act === "sync") syncShared(true);
+    else if (act === "login") ensureLogin().then(renderShared);
+    else if (act === "logout") logOut();
     else if (act === "send") sendShared(kind, item);
     else if (act === "unshare") unshare(kind, item);
     else if (act === "revert") revertShared(kind, item);

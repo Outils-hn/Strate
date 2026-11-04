@@ -11,7 +11,7 @@ const verif = (nom, ok, detail = "") => lignes.push(`${ok ? "OK    " : "ECHEC "}
 const step = async (nom, fn) => { try { await fn(); } catch (e) { verif(nom, false, e.message.split("\n")[0].slice(0, 180)); } };
 const browser = await chromium.launch();
 
-// Catalogue commun SIMULE (aucun acces a la vraie base) : un produit deja partage par l'equipe, PIN 1234
+// Catalogue commun SIMULE (aucun acces a la vraie base) : un produit deja partage par l'equipe ; compte de test, mot de passe « bon »
 const FLUMROC = { id: "flumroc-test", name: "Flumroc Test 3", type: "rigide", lambda: 0.034, density: 100, plateArea: 0.6, priceDate: "2026-10-01",
   thicknesses: [{ t: 100, m2Pack: 3, price: 40, packsPerMP: 10, on: true }, { t: 120, m2Pack: 2.4, price: 48, packsPerMP: 10, on: true }] };
 
@@ -23,11 +23,21 @@ async function ctx({ dark = false, horsLigne = false } = {}) {
     const url = new URL(route.request().url());
     if (url.hostname.startsWith("ngfzwfbraqkdcocdcmib") && url.pathname.endsWith("/products"))
       return route.fulfill({ json: [{ id: "fiche-iso", name: "ISORESIST 1000 031 F", supplier: "Isover", category: "Isolants", deleted_at: null }] });
-    if (url.pathname.endsWith("/strate_catalogue")) return route.fulfill({ json: [{ id: FLUMROC.id, kind: "produit", data: FLUMROC, updated_at: "2026-10-29", deleted_at: null }] });
-    const m = url.pathname.match(/rpc\/(\w+)/);
     const body = JSON.parse(route.request().postData() || "{}");
+    if (url.pathname.endsWith("/auth/v1/token")) {
+      if (body.password !== "bon") return route.fulfill({ status: 400, json: { error: "invalid_grant", error_description: "Invalid login credentials" } });
+      const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+      return route.fulfill({ json: { access_token: `${b64({ alg: "HS256" })}.${b64({ sub: "u1", exp: 4102444800 })}.x`, token_type: "bearer", expires_in: 3600, refresh_token: "r", user: { id: "u1", email: "hugo@test.fr" } } });
+    }
+    const m = url.pathname.match(/rpc\/(\w+)/);
     if (m) rpc.push(m[1]);
-    return route.fulfill({ json: body.p_pin === "1234" ? { ok: true } : { ok: false, error: "PIN incorrect (4 essai(s) restant(s))." } });
+    if (m && m[1] === "strate_lire") {
+      // Sans compte : prix masques par la base ; avec compte : catalogue complet
+      const connecte = /^Bearer .+\..+\./.test(route.request().headers()["authorization"] ?? "");
+      const data = connecte ? FLUMROC : { ...FLUMROC, thicknesses: FLUMROC.thicknesses.map(({ price: _p, ...t }) => t) };
+      return route.fulfill({ json: [{ id: FLUMROC.id, kind: "produit", data, updated_at: "2026-10-29", deleted_at: null }] });
+    }
+    return route.fulfill({ json: { ok: true } });
   });
   await c.addInitScript((d) => { localStorage.setItem("strate.guideSeen", "1"); if (d) localStorage.setItem("strate.theme", "dark"); }, dark);
   const page = await c.newPage();
@@ -53,9 +63,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.6 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.7 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.6").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.7").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
@@ -111,13 +121,18 @@ await step("Catalogue commun", async () => {
   await page.selectOption("#catalogProductSelect", "flumroc-test"); await page.waitForTimeout(200);
   verif("État « Commun à l'équipe »", await page.locator("#sharedProduct").getByText("Commun à l'équipe").isVisible());
   const prix = page.locator('#thicknessRows tr[data-t="100"] input[data-field="price"]');
+  verif("Sans compte : prix masqués", (await prix.inputValue()) === "", await prix.inputValue());
+  verif("Sans compte : « Lecture seule, sans prix »", await page.locator("#sharedProduct").getByText(/Lecture seule, sans prix/).isVisible());
   await prix.fill("42,5"); await prix.dispatchEvent("change"); await page.waitForTimeout(200);
   verif("Modif locale : « Modifié sur ce poste »", await page.locator("#sharedProduct").getByText(/Modifié sur ce poste/).isVisible());
   await page.locator("#sharedProduct").getByRole("button", { name: "Envoyer à l'équipe" }).click(); await page.waitForTimeout(200);
-  await page.locator('#modalFields input').fill("0000"); await page.locator("#modalButtons .primary").click(); await page.waitForTimeout(300);
-  verif("PIN faux refusé dans la fenêtre", /PIN incorrect/.test(await page.locator("#modalError").innerText()));
-  await page.locator('#modalFields input').fill("1234"); await page.locator("#modalButtons .primary").click(); await page.waitForTimeout(500);
-  verif("Envoi à l'équipe avec le PIN", rpc.includes("strate_save_item") && (await page.locator("#sharedProduct").getByText("Commun à l'équipe").isVisible()), rpc.join(", "));
+  await page.locator('#modalFields input[type="email"]').fill("hugo@test.fr");
+  await page.locator('#modalFields input[type="password"]').fill("mauvais"); await page.locator("#modalButtons .primary").click(); await page.waitForTimeout(400);
+  verif("Mauvais mot de passe refusé dans la fenêtre", /incorrect/.test(await page.locator("#modalError").innerText()));
+  await page.locator('#modalFields input[type="password"]').fill("bon"); await page.locator("#modalButtons .primary").click(); await page.waitForTimeout(1200);
+  const envoye = rpc.indexOf("strate_save_item") > rpc.lastIndexOf("strate_lire");
+  verif("Après connexion : catalogue relu avant l'envoi (prix jamais écrasés)", envoye, rpc.join(", "));
+  verif("Envoi à l'équipe avec le compte", rpc.includes("strate_save_item") && (await page.locator("#sharedProduct").getByText("Commun à l'équipe").isVisible()), rpc.join(", "));
   await page.screenshot({ path: `${OUT}/06-catalogue-commun.png`, fullPage: true });
   await page.selectOption("#catalogProductSelect", { index: 0 }); await page.waitForTimeout(200);
   verif("Produit de ce poste : bouton « Partager avec l'équipe »", await page.locator("#sharedProduct").getByRole("button", { name: "Partager avec l'équipe" }).isVisible());
