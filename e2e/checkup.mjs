@@ -63,9 +63,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.7 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.8 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.7").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.8").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
@@ -136,6 +136,24 @@ await step("Catalogue commun", async () => {
   await page.screenshot({ path: `${OUT}/06-catalogue-commun.png`, fullPage: true });
   await page.selectOption("#catalogProductSelect", { index: 0 }); await page.waitForTimeout(200);
   verif("Produit de ce poste : bouton « Partager avec l'équipe »", await page.locator("#sharedProduct").getByRole("button", { name: "Partager avec l'équipe" }).isVisible());
+  await c.close();
+});
+
+await step("Comptes : bandeau et 3 exports gratuits", async () => {
+  const { c, page } = await ctx();
+  await page.waitForTimeout(500);
+  verif("Bandeau : « Lecture seule » + Se connecter", await page.locator("#accountState").innerText() === "Lecture seule" && await page.locator("#accountBtn").innerText() === "Se connecter");
+  await page.evaluate(() => localStorage.setItem("strate.exports.libres", "3"));
+  await page.locator("#backupBtn").scrollIntoViewIfNeeded();
+  await page.locator("#backupBtn").click(); await page.waitForTimeout(400);
+  verif("Apres 3 exports : la connexion est demandee", await page.locator("#modal").getByText("Connexion").first().isVisible());
+  await page.locator('#modalFields input[type="email"]').fill("hugo@test.fr");
+  await page.locator('#modalFields input[type="password"]').fill("bon");
+  const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 8000 }).catch(() => null), page.locator("#modalButtons .primary").click()]);
+  verif("Apres connexion : la sauvegarde part", !!dl);
+  verif("Bandeau : « Connecté · email »", (await page.locator("#accountState").innerText()) === "Connecté · hugo@test.fr" && (await page.locator("#accountBtn").innerText()) === "Se déconnecter");
+  await page.locator("#accountBtn").click(); await page.waitForTimeout(300);
+  verif("Deconnexion : retour en lecture seule", (await page.locator("#accountState").innerText()) === "Lecture seule");
   await c.close();
 });
 

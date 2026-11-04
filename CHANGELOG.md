@@ -4,6 +4,11 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.8 — 4 novembre 2026
+
+- Nouveauté : « Se connecter » est maintenant en haut de la page, comme dans Index ; se connecter dans une appli connecte toutes les autres.
+- Nouveauté : sans compte, Strate reste utilisable (calcul, saisie, enregistrement local) et offre 3 exports de découverte (bon de commande PDF, copie pour Excel, sauvegarde). Ensuite, les exports demandent de se connecter avec son compte Index.
+
 ## 15.7 — 4 novembre 2026
 
 - Nouveauté : plus de code PIN dans Strate. Pour modifier le catalogue commun, on se connecte avec son compte Index (mêmes email et mot de passe, compte validé par un collègue) ; la connexion est partagée avec Index, Masse et Format.

@@ -445,3 +445,8 @@ main { max-width: 1440px; padding-left: 32px; padding-right: 32px; }
   .help { width: 28px; height: 28px; }
   .reminder { margin: 12px 16px 0; }
 }
+
+/* Compte Index dans le bandeau */
+.account-state { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.account-state.on { color: var(--strate-ink, var(--ink)); border-color: var(--strate-ink, var(--line-strong)); }
+@media (max-width: 760px) { .account-state { display: none; } }
