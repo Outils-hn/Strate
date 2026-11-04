@@ -63,9 +63,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.9 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.10 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.9").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.10").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
@@ -94,7 +94,10 @@ await step("Ecran principal", async () => {
   await taper(page, "surface", "12,5*3,2+8"); await page.fill("#facade", "Sud"); await page.fill("#etage", "RDC");
   await page.getByRole("button", { name: "+ Commande" }).first().click(); await page.waitForTimeout(300);
   verif("Commande : 2 zones", /2 zones/.test(await page.locator("#orderCard").innerText()));
-  verif("Rappel de sauvegarde affiche (commande, jamais sauvegardee)", await page.locator("#backupReminder").isVisible());
+  verif("Sans compte : pas de rappel de sauvegarde JSON", !(await page.locator("#backupReminder").isVisible()));
+  await page.evaluate(() => { localStorage.setItem("sb-ngfzwfbraqkdcocdcmib-auth-token", JSON.stringify({ access_token: "a", refresh_token: "r", expires_at: 4102444800, user: { id: "u1", email: "hugo@test.fr" } })); window.dispatchEvent(new StorageEvent("storage", { key: "sb-ngfzwfbraqkdcocdcmib-auth-token" })); });
+  await page.waitForTimeout(300);
+  verif("Rappel de sauvegarde affiche avec un compte (commande, jamais sauvegardee)", await page.locator("#backupReminder").isVisible());
   await page.getByRole("button", { name: "Plus tard" }).click();
   verif("Rappel de sauvegarde : « Plus tard » le masque", !(await page.locator("#backupReminder").isVisible()));
   await taper(page, "surface", "99999999");
@@ -145,11 +148,15 @@ await step("Comptes : bandeau et 3 exports gratuits", async () => {
   verif("Bandeau : « Lecture seule » + Se connecter", await page.locator("#accountState").innerText() === "Lecture seule" && await page.locator("#accountBtn").innerText() === "Se connecter");
   await page.evaluate(() => localStorage.setItem("outils.strate.exports", "3"));
   await page.locator("#backupBtn").scrollIntoViewIfNeeded();
-  await page.locator("#backupBtn").click(); await page.waitForTimeout(400);
-  verif("Apres 3 exports : la connexion est demandee", await page.locator("#modal").getByText("Connexion").first().isVisible());
+  const [dlSans] = await Promise.all([page.waitForEvent("download", { timeout: 1500 }).catch(() => null), page.locator("#backupBtn").click()]);
+  await page.waitForTimeout(300);
+  verif("Sans compte : pas de sauvegarde JSON, message « compte requis »", !dlSans && (await page.locator("#toast").innerText().catch(() => "")).includes("Fichier JSON : compte requis"));
+  await page.locator("#accountBtn").click(); await page.waitForTimeout(400);
+  verif("La connexion s'ouvre depuis le bandeau", await page.locator("#modal").getByText("Connexion").first().isVisible());
   await page.locator('#modalFields input[type="email"]').fill("hugo@test.fr");
   await page.locator('#modalFields input[type="password"]').fill("bon");
-  const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 8000 }).catch(() => null), page.locator("#modalButtons .primary").click()]);
+  await page.locator("#modalButtons .primary").click(); await page.waitForTimeout(900);
+  const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 8000 }).catch(() => null), page.locator("#backupBtn").click()]);
   verif("Apres connexion : la sauvegarde part", !!dl);
   verif("Bandeau : email seul", (await page.locator("#accountState").innerText()) === "hugo@test.fr" && (await page.locator("#accountBtn").innerText()) === "Se déconnecter");
   await page.locator("#accountBtn").click(); await page.waitForTimeout(300);
