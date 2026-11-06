@@ -409,6 +409,7 @@ body { border-top: 3px solid var(--strate); }
 .tab.active { background: var(--surface); color: var(--ink); box-shadow: inset 0 -2px 0 var(--strate); }
 
 /* Separateur entre « Accueil » et les applis dans le menu */
+.apps-menu a[hidden] { display: none; }
 .apps-sep { height: 1px; background: var(--line); margin: 4px 8px; }
 
 /* ===== Bandeau commun de la famille (meme rendu que les 8 autres applis) =====
