@@ -57,15 +57,20 @@ await step("Ecran principal", async () => {
   const { c, page, etat } = await ctx();
   await page.screenshot({ path: `${OUT}/01-strate.png`, fullPage: true });
   await page.locator("#appsMenu summary").click(); await page.waitForTimeout(150);
-  const applis = (await page.locator(".apps-menu a .nm").allInnerTexts()).join(", ");
+  const applis = (await page.locator(".apps-menu a:not([hidden]) .nm").allInnerTexts()).filter(Boolean).join(", "); // Joint (apercu) reste cache sans le drapeau du concepteur
   verif("Selecteur : Accueil + 8 applis dans l'ordre", applis === "Accueil, Access, Check, Format, Index, Linear, Masse, Strate, Trame", applis);
+  await page.evaluate(() => localStorage.setItem("outils-apercu", "1")); await page.reload(); await page.waitForTimeout(300);
+  await page.locator("#appsMenu summary").click(); await page.waitForTimeout(150);
+  const applisApercu = (await page.locator(".apps-menu a:not([hidden]) .nm").allInnerTexts()).filter(Boolean).join(", ");
+  verif("Selecteur : Joint apparait avec le drapeau du concepteur", applisApercu === "Accueil, Access, Check, Format, Index, Joint, Linear, Masse, Strate, Trame", applisApercu);
+  await page.evaluate(() => localStorage.removeItem("outils-apercu")); await page.reload(); await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/02-selecteur.png` });
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.10 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.11 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.10").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.11").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
