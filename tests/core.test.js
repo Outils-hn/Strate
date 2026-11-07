@@ -102,6 +102,7 @@ test("textes : dates, zones, nombres pour Excel", () => {
   assert.equal(c.frDate("2026-10-18"), "18.10.2026");
   assert.equal(c.frDate(null), "");
   assert.equal(c.zoneLabel({ facade: "Nord", etage: "2e" }), "Façade Nord · Étage 2e");
+  assert.equal(c.zoneLabel({ facade: "Nord", etage: "2e", plan: "101" }), "Façade Nord · Étage 2e · Coupe 101");
   assert.equal(c.zoneLabel({}), "Zone");
   assert.equal(c.xlNum(2218.5), "2218,50"); // pas d'espace des milliers
 });

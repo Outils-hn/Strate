@@ -65,9 +65,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.12 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.13 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.12").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.13").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
@@ -91,11 +91,15 @@ await step("Ecran principal", async () => {
   // Commande
   await taper(page, "surface", "-10");
   verif("Surface négative signalée", /supérieure à 0/.test(await page.locator("#surfaceCalc").innerText()));
-  await taper(page, "surface", "42,5"); await page.fill("#facade", "Nord"); await page.fill("#etage", "2e");
+  await taper(page, "surface", "42,5"); await page.fill("#facade", "Nord"); await page.fill("#etage", "2e"); await page.fill("#plan", "101");
   await page.getByRole("button", { name: "+ Commande" }).first().click(); await page.waitForTimeout(300);
   await taper(page, "surface", "12,5*3,2+8"); await page.fill("#facade", "Sud"); await page.fill("#etage", "RDC");
   await page.getByRole("button", { name: "+ Commande" }).first().click(); await page.waitForTimeout(300);
   verif("Commande : 2 zones", /2 zones/.test(await page.locator("#orderCard").innerText()));
+  verif("Le n° du plan de coupe est note sur la zone", /Façade Nord · Étage 2e · Coupe 101/.test(await page.locator("#orderCard").innerText()), (await page.locator("#orderCard").innerText()).slice(0, 200));
+  verif("Le n° du plan reste rempli apres l'ajout (comme la facade)", (await page.inputValue("#plan")) === "101");
+  const colonnes = await page.evaluate(() => ({ h: ZONE_HEADER.slice(0, 4), v: zoneValues(curOrder().lines[0]).slice(0, 4) }));
+  verif("Export Excel : colonne « Plan de coupe » apres l'etage", colonnes.h.join("|") === "Façade|Étage|Plan de coupe|Produit" && colonnes.v[2] === "101", JSON.stringify(colonnes));
   verif("Sans compte : pas de rappel de sauvegarde JSON", !(await page.locator("#backupReminder").isVisible()));
   await page.evaluate(() => { localStorage.setItem("sb-ngfzwfbraqkdcocdcmib-auth-token", JSON.stringify({ access_token: "a", refresh_token: "r", expires_at: 4102444800, user: { id: "u1", email: "hugo@test.fr" } })); window.dispatchEvent(new StorageEvent("storage", { key: "sb-ngfzwfbraqkdcocdcmib-auth-token" })); });
   await page.waitForTimeout(300);
