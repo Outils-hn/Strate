@@ -4,6 +4,11 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.12 — 7 novembre 2026
+
+- Nouveauté : le menu des applis propose maintenant Joint (dilatation et joints) et Membrane (étanchéité).
+- Correction : dans le sélecteur d'applis, la description de l'Accueil ne passe plus sur deux lignes.
+
 ## 15.11 — 6 novembre 2026
 
 - Le menu des applis propose Joint (en préparation), pour le concepteur seulement : aucune Nouveauté à annoncer à l'équipe.

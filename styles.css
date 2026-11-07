@@ -87,10 +87,10 @@ body {
 .apps-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; min-width: 270px; padding: 4px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.08); }
 .apps-menu .apps-label { padding: 6px 8px 4px; font-size: 12px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-.apps-menu a { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 5px; color: var(--ink); text-decoration: none; font-size: 14px; }
+.apps-menu a { white-space: nowrap; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 5px; color: var(--ink); text-decoration: none; font-size: 14px; }
 .apps-menu a:hover, .apps-menu a:focus-visible { background: var(--sunk); }
 .apps-menu .sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
-.apps-menu .nm { width: 56px; flex: none; font-weight: 500; }
+.apps-menu .nm { width: 82px; flex: none; font-weight: 500; }
 .apps-menu .rl { font-size: 12px; color: var(--muted); }
 .apps-menu .ck { margin-left: auto; }
 .topnav { display: flex; gap: 22px; flex: 1; overflow-x: auto; scrollbar-width: none; }
@@ -409,7 +409,6 @@ body { border-top: 3px solid var(--strate); }
 .tab.active { background: var(--surface); color: var(--ink); box-shadow: inset 0 -2px 0 var(--strate); }
 
 /* Separateur entre « Accueil » et les applis dans le menu */
-.apps-menu a[hidden] { display: none; }
 .apps-sep { height: 1px; background: var(--line); margin: 4px 8px; }
 
 /* ===== Bandeau commun de la famille (meme rendu que les 8 autres applis) =====

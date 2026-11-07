@@ -1592,13 +1592,11 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.11</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.12</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
 }));
-// Joint (en preparation) : visible seulement pour le concepteur (drapeau laisse par l'Accueil, meme site pour toutes les applis)
-try { if (localStorage.getItem("outils-apercu") === "1") $("menuJoint").hidden = false; } catch (e) { /* stockage bloque */ }
 // Menu des applis : se ferme en cliquant ailleurs ou avec Echap
 document.addEventListener("click", e => { const m = $("appsMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("appsMenu").open) { $("appsMenu").open = false; $("appsMenu").querySelector("summary").focus(); } });
