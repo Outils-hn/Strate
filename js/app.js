@@ -59,7 +59,7 @@ function saveState() {
     target: $("target").value, maxLayers: $("maxLayers").value,
     tolMinus: $("tolMinus").value, tolPlus: $("tolPlus").value,
     surface: $("surface").value, sortMode: $("sortMode").value,
-    facade: $("facade").value, etage: $("etage").value, mode
+    facade: $("facade").value, etage: $("etage").value, plan: $("plan").value, mode
   };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
   if (typeof renderShared === "function" && $("sharedProduct")) renderShared();
@@ -287,6 +287,7 @@ async function addToOrder(layers, prods) {
     prods,          // produit de chaque couche (melange possible)
     facade: $("facade").value.trim(),
     etage: $("etage").value.trim(),
+    plan: $("plan").value.trim(),
     layers,
     surface,
     copied: false
@@ -558,14 +559,14 @@ function tsv(header, rows) {
   return lines.join("\n");
 }
 
-const ZONE_HEADER = ["Façade", "Étage", "Produit", "Composition", "Ép. totale (mm)", "Couche 1 (mm)", "Couche 2 (mm)", "Couche 3 (mm)", "Surface (m²)", "Fixations"];
+const ZONE_HEADER = ["Façade", "Étage", "Plan de coupe", "Produit", "Composition", "Ép. totale (mm)", "Couche 1 (mm)", "Couche 2 (mm)", "Couche 3 (mm)", "Surface (m²)", "Fixations"];
 
 function zoneValues(l) {
   // Couche 1 = cote mur ; colonnes fixes pour pouvoir filtrer / sommer
   const prods = layerProducts(l);
   const names = [...new Set(prods)].map(id => (productById(id) || {}).name || l.productName).join(" / ");
   const fix = curOrder().fix.on ? lineFixLabel(l, state.products, state.fixSystems, curOrder().fix) : "";
-  return [l.facade || "", l.etage || "", names, lineLabel(l),
+  return [l.facade || "", l.etage || "", l.plan || "", names, lineLabel(l),
     l.layers.reduce((a, b) => a + b, 0), l.layers[0] ?? "", l.layers[1] ?? "", l.layers[2] ?? "", l.surface, fix];
 }
 
@@ -866,7 +867,8 @@ async function editLine(id) {
     fields: [
       { id: "surface", label: "Surface (m²) — un calcul est accepté", value: String(l.surface).replace(".", ","), inputmode: "decimal" },
       { id: "facade", label: "Façade", value: l.facade || "" },
-      { id: "etage", label: "Étage", value: l.etage || "" }
+      { id: "etage", label: "Étage", value: l.etage || "" },
+      { id: "plan", label: "N° du plan de coupe", value: l.plan || "" }
     ],
     buttons: [
       { label: "Supprimer", value: "delete", ghost: true },
@@ -885,6 +887,7 @@ async function editLine(id) {
     l.surface = evalSurface(r.values.surface);
     l.facade = r.values.facade.trim();
     l.etage = r.values.etage.trim();
+    l.plan = r.values.plan.trim();
   }
   renderOrder(); saveState();
 }
@@ -933,7 +936,7 @@ $("copyRecapBtn").addEventListener("click", async () => {
   const ok = await copyRich(recapClipboard());
   toast(ok ? "Récap copié, colle-le dans Excel" : "Copie impossible sur ce navigateur");
 });
-["facade", "etage"].forEach(id => $(id).addEventListener("input", saveState));
+["facade", "etage", "plan"].forEach(id => $(id).addEventListener("input", saveState));
 $("copyOrderBtn").addEventListener("click", async () => {
   const txt = orderText();
   try {
@@ -1125,6 +1128,7 @@ function buildPrintView() {
   const waste = Number(o.waste) || 0;
   const products = [...new Set(o.lines.flatMap(l => layerProducts(l).map(id => (productById(id) || {}).name || l.productName)))];
   const total = rows.reduce((s, r) => s + (r.price || 0), 0);
+  const hasPlan = o.lines.some(l => l.plan);
   const fixOn = o.fix.on;
   const fix = fixOn ? fixTotals() : { rows: [], alerts: [] };
   const fixTotal = fix.rows.reduce((s, r) => s + (r.price || 0), 0);
@@ -1150,9 +1154,10 @@ function buildPrintView() {
     return `<div class="pv-facade">
       <h3>${f ? "Façade " + escapeHtml(f) : "Sans façade précisée"}</h3>
       <table>
-        <thead><tr><th>Étage</th><th>Composition</th>${multiProduct ? "<th>Produit</th>" : ""}${fixOn ? "<th>Fixations</th>" : ""}<th class="num">Ép. totale</th><th class="num">Surface</th></tr></thead>
+        <thead><tr><th>Étage</th>${hasPlan ? "<th>Plan</th>" : ""}<th>Composition</th>${multiProduct ? "<th>Produit</th>" : ""}${fixOn ? "<th>Fixations</th>" : ""}<th class="num">Ép. totale</th><th class="num">Surface</th></tr></thead>
         <tbody>${lines.map(l => `<tr>
           <td>${escapeHtml(l.etage || "—")}</td>
+          ${hasPlan ? `<td>${escapeHtml(l.plan || "—")}</td>` : ""}
           <td>${escapeHtml(lineLabel(l))}</td>
           ${multiProduct ? `<td>${escapeHtml(isMixed(layerProducts(l)) ? "voir composition" : l.productName)}</td>` : ""}
           ${fixOn ? `<td>${escapeHtml(lineFixLabel(l, state.products, state.fixSystems, o.fix))}</td>` : ""}
@@ -1592,7 +1597,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.12</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.13</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -2169,6 +2174,7 @@ function restoreInputs() {
   $("surface").value = inp.surface || "";
   $("facade").value = inp.facade || "";
   $("etage").value = inp.etage || "";
+  $("plan").value = inp.plan || "";
   renderSurfaceCalc();
   setMode(inp.mode || "combo");
 }

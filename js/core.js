@@ -492,6 +492,7 @@
     const parts = [];
     if (l.facade) parts.push(`Façade ${l.facade}`);
     if (l.etage) parts.push(`Étage ${l.etage}`);
+    if (l.plan) parts.push(`Coupe ${l.plan}`);
     return parts.length ? parts.join(" · ") : "Zone";
   }
 
