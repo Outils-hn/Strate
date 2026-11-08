@@ -390,3 +390,10 @@ test("catalogue commun : etat apres modif locale", () => {
   assert.equal(sharedStatus(P("a", 11), base), "modified");
   assert.equal(sharedStatus(P("z", 1), base), "local");
 });
+
+test("lecture commune : point ET virgule, ambigus refuses, jamais -0", () => {
+  assert.equal(c.parseNum("1.250,5"), 1250.5); assert.equal(c.parseNum("1,250.5"), 1250.5);
+  for (const s of ["12..5", "1,2,3", "1.250,5,2", "1e3", "0x1F"]) assert.ok(Number.isNaN(c.parseNum(s)), s);
+  assert.equal(c.fmt(-0.001, 2), "0,00"); assert.equal(c.fmt0(-0.001), "0"); assert.equal(c.xlNum(-0.001, 2), "0,00");
+  assert.equal(c.fmt(2700.5, 2), "2'700,50");
+});

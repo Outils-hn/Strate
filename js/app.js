@@ -1085,8 +1085,8 @@ $("newProductBtn").addEventListener("click", async () => {
   const list = r.values.list.split(/[,;\s]+/).map(Number).filter(n => n > 0).map(Math.round);
   const id = "p" + Date.now();
   state.products.push({
-    id, name: r.values.name.trim(), density: Number(r.values.density.replace(",", ".")) || null,
-    type: typeFromDensity(Number(r.values.density.replace(",", "."))) || "semi-rigide", lambda: null, priceDate: null,
+    id, name: r.values.name.trim(), density: parseNum(r.values.density) || null,
+    type: typeFromDensity(parseNum(r.values.density)) || "semi-rigide", lambda: null, priceDate: null,
     thicknesses: [...new Set(list)].map(t => ({ t, on: true, m2Pack: null, price: null }))
   });
   state.currentId = id;
@@ -1597,7 +1597,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.15</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.16</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
