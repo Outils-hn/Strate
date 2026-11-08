@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.16 — 9 novembre 2026
+
+- Nouveauté : les nombres se lisent de la même façon que dans les autres applis (« 1.250,5 » est compris, un nombre ambigu comme « 12..5 » est refusé) et il n'y a plus jamais de « -0,00 ».
+
 ## 15.15 — 8 novembre 2026
 
 - Technique : les données sont passées sur le nouveau serveur Supabase en Suisse (adresse, clé et mémoire de connexion mises à jour). Il faut se reconnecter une fois.

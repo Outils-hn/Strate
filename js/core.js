@@ -107,9 +107,11 @@
   // Format francais : 7,10 au lieu de 7.10
   // Separateur de milliers a la suisse (apostrophe), virgule decimale : 2'700,50
   const swiss = s => s.replace(/[\u202f\u00a0 ]/g, "'");
-  const fmt = (v, d = 2) => swiss(Number(v).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }));
+  // Jamais « -0,00 » : une valeur qui s'arrondit a zero s'affiche 0
+  const sansMoinsZero = (v, d) => (Math.abs(Number(v)) < 0.5 * 10 ** -d ? 0 : Number(v));
+  const fmt = (v, d = 2) => swiss(sansMoinsZero(v, d).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d }));
 
-  const fmt0 = v => swiss(Number(v).toLocaleString("fr-FR", { maximumFractionDigits: 2 }));
+  const fmt0 = v => swiss(sansMoinsZero(v, 2).toLocaleString("fr-FR", { maximumFractionDigits: 2 }));
 
   function newOrder(name) {
     return { id: "o" + Date.now() + Math.floor(Math.random() * 1000), name, lines: [], waste: 5, fix: defaultFix(),
@@ -498,7 +500,7 @@
 
   // Nombre sans separateur de milliers (l'espace fine empecherait Excel de reconnaitre un nombre)
   function xlNum(v, d = 2) {
-    return Number(v).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false });
+    return sansMoinsZero(v, d).toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d, useGrouping: false });
   }
 
   // ===== Catalogue =====
@@ -551,7 +553,13 @@
   function parseNum(cell) {
     if (cell == null) return NaN;
     let s = String(cell).replace(/mm|m²|m2|chf|fr\.?/gi, "").replace(/['’\s  ]/g, "");
-    if (/^\d+,\d+$/.test(s)) s = s.replace(",", ".");
+    // Point ET virgule : le dernier est la decimale (« 1.250,5 » et « 1,250.5 »). Plusieurs du meme signe : illisible.
+    const nbV = (s.match(/,/g) || []).length, nbP = (s.match(/\./g) || []).length;
+    if (nbV && nbP) {
+      const dec = s.lastIndexOf(",") > s.lastIndexOf(".") ? "," : ".";
+      if ((dec === "," ? nbV : nbP) > 1) return NaN;
+      s = s.split(dec === "," ? "." : ",").join("").replace(",", ".");
+    } else if (/^\d+,\d+$/.test(s)) s = s.replace(",", ".");
     else s = s.replace(/,(?=\d{3}\b)/g, "").replace(",", ".");
     return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
   }
