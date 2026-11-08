@@ -21,7 +21,7 @@ async function ctx({ dark = false, horsLigne = false } = {}) {
   await c.route(/supabase\.co/, async (route) => {
     if (horsLigne) return route.abort();
     const url = new URL(route.request().url());
-    if (url.hostname.startsWith("ngfzwfbraqkdcocdcmib") && url.pathname.endsWith("/products"))
+    if (url.hostname.startsWith("dtxgvwaqjmmffiiohika") && url.pathname.endsWith("/products"))
       return route.fulfill({ json: [{ id: "fiche-iso", name: "ISORESIST 1000 031 F", supplier: "Isover", category: "Isolants", deleted_at: null }] });
     const body = JSON.parse(route.request().postData() || "{}");
     if (url.pathname.endsWith("/auth/v1/token")) {
@@ -65,9 +65,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.14 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.15 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.14").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.15").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies
@@ -101,7 +101,7 @@ await step("Ecran principal", async () => {
   const colonnes = await page.evaluate(() => ({ h: ZONE_HEADER.slice(0, 4), v: zoneValues(curOrder().lines[0]).slice(0, 4) }));
   verif("Export Excel : colonne « Plan de coupe » apres l'etage", colonnes.h.join("|") === "Façade|Étage|Plan de coupe|Produit" && colonnes.v[2] === "101", JSON.stringify(colonnes));
   verif("Sans compte : pas de rappel de sauvegarde JSON", !(await page.locator("#backupReminder").isVisible()));
-  await page.evaluate(() => { localStorage.setItem("sb-ngfzwfbraqkdcocdcmib-auth-token", JSON.stringify({ access_token: "a", refresh_token: "r", expires_at: 4102444800, user: { id: "u1", email: "hugo@test.fr" } })); window.dispatchEvent(new StorageEvent("storage", { key: "sb-ngfzwfbraqkdcocdcmib-auth-token" })); });
+  await page.evaluate(() => { localStorage.setItem("sb-dtxgvwaqjmmffiiohika-auth-token", JSON.stringify({ access_token: "a", refresh_token: "r", expires_at: 4102444800, user: { id: "u1", email: "hugo@test.fr" } })); window.dispatchEvent(new StorageEvent("storage", { key: "sb-dtxgvwaqjmmffiiohika-auth-token" })); });
   await page.waitForTimeout(300);
   verif("Rappel de sauvegarde affiche avec un compte (commande, jamais sauvegardee)", await page.locator("#backupReminder").isVisible());
   await page.getByRole("button", { name: "Plus tard" }).click();

@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.15 — 8 novembre 2026
+
+- Technique : les données sont passées sur le nouveau serveur Supabase en Suisse (adresse, clé et mémoire de connexion mises à jour). Il faut se reconnecter une fois.
+
 ## 15.14 — 8 novembre 2026
 
 - Nouveauté : le champ « Plan de coupe » a un titre plus court et s'aligne avec les autres champs au lieu de passer sur deux lignes.

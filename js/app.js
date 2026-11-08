@@ -1597,7 +1597,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.14</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.15</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1866,11 +1866,11 @@ $("doImportBtn").addEventListener("click", () => {
 // Produits (prix, colis, palettes compris) et systemes de fixation partages via la base d'Index (la meme que Masse et Format)
 // (Supabase, Francfort). Lecture libre mais SANS les prix (les prix sont reserves aux comptes) ; envoi et retrait : compte Index valide.
 // Sans reseau, Strate continue avec la copie de ce poste. Logique de fusion : core.js (testee).
-const SB_URL = "https://ngfzwfbraqkdcocdcmib.supabase.co";
-const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZnp3ZmJyYXFrZGNvY2RjbWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzg2NTcsImV4cCI6MjA5NTIxNDY1N30.Ikovcm4eWkLvPO_PvkI8C8DJebBT011Rz87k_EYFdbU"; // cle PUBLIQUE, faite pour une page web
+const SB_URL = "https://dtxgvwaqjmmffiiohika.supabase.co";
+const SB_KEY = "sb_publishable_yEWGxFFSLTE1lJRXnFUmpg_dMwa6LxW"; // cle PUBLIQUE, faite pour une page web
 const BASE_KEY = "strate.shared.base";
 // Meme cle de stockage qu'Index : la connexion est partagee entre les applis (meme site)
-const SESSION_KEY = "sb-ngfzwfbraqkdcocdcmib-auth-token";
+const SESSION_KEY = "sb-dtxgvwaqjmmffiiohika-auth-token";
 const shared = { state: "sync", at: null, anon: true };
 
 function loadBase() {
@@ -2108,13 +2108,13 @@ function renderShared() {
 // Liste des fiches lue (en lecture seule) dans la base d'Index ; le produit garde l'id et le nom
 // de sa fiche (partages avec le catalogue commun). Bouton « Fiche technique » = ouverture dans Index.
 const INDEX_URL = "https://outils-hn.github.io/Index";
-const INDEX_DB = "https://ngfzwfbraqkdcocdcmib.supabase.co";
-const INDEX_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZnp3ZmJyYXFrZGNvY2RjbWliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk2Mzg2NTcsImV4cCI6MjA5NTIxNDY1N30.Ikovcm4eWkLvPO_PvkI8C8DJebBT011Rz87k_EYFdbU"; // cle PUBLIQUE d'Index
+const INDEX_DB = "https://dtxgvwaqjmmffiiohika.supabase.co";
+const INDEX_KEY = "sb_publishable_yEWGxFFSLTE1lJRXnFUmpg_dMwa6LxW"; // cle PUBLIQUE d'Index
 const ficheUrl = id => `${INDEX_URL}/?fiche=${encodeURIComponent(id)}`;
 let fichesIndex = null;
 function chargerFiches() {
   fichesIndex ??= fetch(`${INDEX_DB}/rest/v1/products?select=id,name,supplier,category,deleted_at&order=name`,
-    { headers: { apikey: INDEX_KEY, Authorization: `Bearer ${INDEX_KEY}` } })
+    { headers: { apikey: INDEX_KEY } })
     .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
     .then(rows => rows.filter(r => !r.deleted_at))
     .catch(e => { fichesIndex = null; throw e; });
