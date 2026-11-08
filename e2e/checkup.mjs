@@ -65,9 +65,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.16 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.17 · Conçu par Hugo N. · 2026 · Sauvegarde · Suggestion / bug", pied);
   await page.getByRole("button", { name: "Conçu par Hugo N." }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.16").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.17").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies

@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.17 — 9 novembre 2026
+
+- Nouveauté : au téléphone, les boutons et menus font 44 px de haut et les liens du pied de page se touchent plus facilement. Les 93 champs du catalogue et des fixations ont maintenant un nom pour les lecteurs d'écran.
+
 ## 15.16 — 9 novembre 2026
 
 - Nouveauté : les nombres se lisent de la même façon que dans les autres applis (« 1.250,5 » est compris, un nombre ambigu comme « 12..5 » est refusé) et il n'y a plus jamais de « -0,00 ».

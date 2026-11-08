@@ -450,3 +450,12 @@ main { max-width: 1440px; padding-left: 32px; padding-right: 32px; }
 .account-state { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 .account-state.on { color: var(--strate-ink, var(--ink)); border-color: var(--strate-ink, var(--line-strong)); }
 @media (max-width: 760px) { .account-state { display: none; } }
+
+/* Zones tactiles : 44 px au doigt (écrans tactiles seulement, rien ne change à la souris) */
+@media (pointer: coarse) {
+  button, summary, #appsList a { min-height: 44px !important; }
+  .row .tg, .sel-pop button { min-height: 44px !important; }
+  .help, .linkish { min-height: 0 !important; }
+  footer a, footer button, .linkish, .help { position: relative; }
+  footer a::after, footer button::after, .linkish::after, .help::after { content: ""; position: absolute; inset: -14px -8px; }
+}
