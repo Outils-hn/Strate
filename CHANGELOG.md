@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.14 — 8 novembre 2026
+
+- Nouveauté : le champ « Plan de coupe » a un titre plus court et s'aligne avec les autres champs au lieu de passer sur deux lignes.
+
 ## 15.13 — 7 novembre 2026
 
 - Nouveauté : on peut noter le numéro du plan de coupe (comme dans Membrane) pour situer de quel plan vient l'isolation calculée. Il s'affiche sur chaque zone, dans la commande, le PDF et la copie Excel.
