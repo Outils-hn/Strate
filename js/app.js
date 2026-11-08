@@ -868,7 +868,7 @@ async function editLine(id) {
       { id: "surface", label: "Surface (m²) — un calcul est accepté", value: String(l.surface).replace(".", ","), inputmode: "decimal" },
       { id: "facade", label: "Façade", value: l.facade || "" },
       { id: "etage", label: "Étage", value: l.etage || "" },
-      { id: "plan", label: "N° du plan de coupe", value: l.plan || "" }
+      { id: "plan", label: "Plan de coupe", value: l.plan || "" }
     ],
     buttons: [
       { label: "Supprimer", value: "delete", ghost: true },
@@ -1597,7 +1597,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.13</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.14</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
