@@ -707,11 +707,11 @@ function renderCatalog() {
     <tr class="${x.on ? "" : "off"}" data-t="${x.t}">
       <td><input type="checkbox" data-field="on" ${x.on ? "checked" : ""} aria-label="Disponible"></td>
       <td class="num">${x.t}</td>
-      <td class="num"><input type="text" data-field="m2Pack" value="${decOut(x.m2Pack)}" inputmode="decimal" autocomplete="off"></td>
-      <td class="num"><input type="text" data-field="packsPerMP" value="${x.packsPerMP ?? ""}" inputmode="numeric" autocomplete="off"></td>
+      <td class="num"><input type="text" data-field="m2Pack" value="${decOut(x.m2Pack)}" inputmode="decimal" autocomplete="off" aria-label="m² par colis, épaisseur ${x.t} mm"></td>
+      <td class="num"><input type="text" data-field="packsPerMP" value="${x.packsPerMP ?? ""}" inputmode="numeric" autocomplete="off" aria-label="Colis par palette, épaisseur ${x.t} mm"></td>
       <td class="num meta">${x.packsPerMP && x.m2Pack ? fmt(x.packsPerMP * x.m2Pack) : "—"}</td>
-      <td class="num"><input type="text" data-field="price" value="${decOut(x.price, 2)}" inputmode="decimal" autocomplete="off"></td>
-      <td><button class="btn small ghost" data-del="${x.t}" aria-label="Supprimer">✕</button></td>
+      <td class="num"><input type="text" data-field="price" value="${decOut(x.price, 2)}" inputmode="decimal" autocomplete="off" aria-label="Prix en CHF, épaisseur ${x.t} mm"></td>
+      <td><button class="btn small ghost" data-del="${x.t}" aria-label="Supprimer l'épaisseur ${x.t} mm">✕</button></td>
     </tr>`).join("")
     : `<tr><td colspan="7" class="empty">Aucune épaisseur — ajoutes-en une.</td></tr>`;
 }
@@ -1423,11 +1423,11 @@ function renderFixCatalog() {
   $("fixPriceNote").value = sys.priceNote || "";
   $("fixArticlesHead").innerHTML = `<tr><th>Désignation</th><th>N° art.</th>${isAnchor ? '<th class="num">Fixation max (mm)</th>' : ""}<th class="num">CHF / 100</th><th class="num">Pièces / boîte</th><th></th></tr>`;
   $("fixArticles").innerHTML = sys.articles.map((a, i) => `<tr data-i="${i}">
-    <td><input data-f="name" value="${escapeHtml(a.name)}"></td>
-    <td><input data-f="art" value="${escapeHtml(a.art || "")}"></td>
-    ${isAnchor ? `<td class="num"><input data-f="max" type="text" min="0" value="${a.max ?? ""}" inputmode="numeric"></td>` : ""}
-    <td class="num"><input data-f="price100" type="text" value="${decOut(a.price100, 2)}" inputmode="decimal" autocomplete="off"></td>
-    <td class="num"><input data-f="pack" type="text" min="0" step="1" value="${a.pack ?? ""}" inputmode="numeric"></td>
+    <td><input data-f="name" value="${escapeHtml(a.name)}" aria-label="Nom de l'article"></td>
+    <td><input data-f="art" value="${escapeHtml(a.art || "")}" aria-label="Numéro d'article de ${escapeHtml(a.name)}"></td>
+    ${isAnchor ? `<td class="num"><input data-f="max" type="text" min="0" value="${a.max ?? ""}" inputmode="numeric" aria-label="Épaisseur maximale de ${escapeHtml(a.name)}, en mm"></td>` : ""}
+    <td class="num"><input data-f="price100" type="text" value="${decOut(a.price100, 2)}" inputmode="decimal" autocomplete="off" aria-label="Prix en CHF pour 100 pièces de ${escapeHtml(a.name)}"></td>
+    <td class="num"><input data-f="pack" type="text" min="0" step="1" value="${a.pack ?? ""}" inputmode="numeric" aria-label="Pièces par boîte de ${escapeHtml(a.name)}"></td>
     <td><button class="btn small ghost" data-delart="${i}" aria-label="Supprimer">✕</button></td></tr>`).join("")
     || `<tr><td colspan="6" class="empty">Aucun article.</td></tr>`;
   $("fixRulesBox").classList.toggle("hidden", isAnchor);
@@ -1597,7 +1597,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.16</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.17</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
