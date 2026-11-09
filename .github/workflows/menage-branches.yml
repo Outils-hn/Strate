@@ -14,7 +14,7 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Supprimer la branche fusionnee et ses captures
         env:
           BRANCHE: ${{ github.event.pull_request.head.ref }}
@@ -25,7 +25,7 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Supprimer les branches de la liste
         run: |
           while read -r b; do
