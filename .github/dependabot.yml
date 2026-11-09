@@ -1,0 +1,10 @@
+# Mises a jour automatiques : une seule demande groupee par mois, a relire avec le check-up (rien n'est fusionne tout seul).
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      tout:
+        patterns: ["*"]
