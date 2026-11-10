@@ -1597,7 +1597,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.19</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.20</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -2200,3 +2200,30 @@ function lienNoter() {
   try { const n = String(JSON.parse(localStorage.getItem("outils-chantier-info") ?? "null")?.numero ?? "").trim(); return n ? `${base}?noter=${encodeURIComponent(`#${n} `)}` : base; } catch { return base; }
 }
 { const a = document.getElementById("noterCheck"); if (a) a.href = lienNoter(); }
+
+// ---------- Touche « ? » : liste des raccourcis clavier ----------
+(function raccourcisAide() {
+  const lignes = [
+    [["Ctrl", "K"], "Rechercher dans toutes les applis (ouvre l'Accueil)"],
+    [["Échap"], "Fermer une fenêtre ou un menu"],
+    [["Entrée"], "Valider la fenêtre ou le champ en cours"],
+    [["Tab"], "Champ suivant (Maj + Tab : précédent)"],
+    [["?"], "Afficher cette liste"],
+  ];
+  const kbd = (t) => `<kbd style="border:1px solid var(--line-strong,#d4d4cf);border-radius:4px;padding:1px 6px;font:12px ui-monospace,monospace;background:var(--sunk,#f3f3f0)">${t}</kbd>`;
+  const d = document.createElement("dialog");
+  d.id = "dRaccourcis";
+  d.setAttribute("aria-labelledby", "dr-titre");
+  d.innerHTML = `<div class="apropos" style="padding:20px"><h3 id="dr-titre" style="margin:0 0 10px">Raccourcis clavier</h3>${lignes.map(([t, x]) => `<div style="display:flex;justify-content:space-between;gap:16px;padding:8px 0;border-top:1px solid var(--line,#e8e8e5)"><span>${x}</span><span style="display:flex;gap:4px;flex:none">${t.map(kbd).join("")}</span></div>`).join("")}<form method="dialog" style="margin-top:12px;text-align:right"><button class="btn">Fermer</button></form></div>`;
+  document.body.appendChild(d);
+  const menu = document.querySelector(".apps-menu");
+  if (menu) {
+    menu.insertAdjacentHTML("beforeend", `<div class="apps-sep" role="separator"></div><a href="#raccourcis" id="raccourcisBtn"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10"/></svg></span><span class="nm">Raccourcis</span><span class="rl">Touches du clavier · ?</span></a>`);
+    document.getElementById("raccourcisBtn").addEventListener("click", (e) => { e.preventDefault(); const m = document.getElementById("appsMenu") || menu.closest("details"); if (m) m.open = false; d.showModal(); });
+  }
+  document.addEventListener("keydown", (e) => {
+    const t = e.target;
+    if (e.key !== "?" || e.ctrlKey || e.metaKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(t.tagName) || t.isContentEditable || document.querySelector("dialog[open]")) return;
+    e.preventDefault(); d.showModal();
+  });
+})();

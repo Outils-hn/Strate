@@ -90,6 +90,8 @@ body {
 .apps-menu a { white-space: nowrap; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 5px; color: var(--ink); text-decoration: none; font-size: 14px; }
 .apps-menu a:hover, .apps-menu a:focus-visible { background: var(--sunk); }
 .apps-menu .sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.apps-menu .sw.ico { display: flex; align-items: center; justify-content: center; border: 0; color: var(--muted, #6b7280); }
+.apps-menu .sw.ico svg { flex: none; }
 .apps-menu .nm { width: 82px; flex: none; font-weight: 500; }
 .apps-menu .rl { font-size: 12px; color: var(--muted); }
 .apps-menu .ck { margin-left: auto; }
