@@ -2198,7 +2198,7 @@ document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.
 // ---------- Touche « ? » : liste des raccourcis clavier ----------
 (function raccourcisAide() {
   const lignes = [
-    [["Ctrl", "K"], "Rechercher dans toutes les applis (ouvre l'Accueil)"],
+    [["Ctrl", "K"], "Rechercher dans toutes les applis"],
     [["Échap"], "Fermer une fenêtre ou un menu"],
     [["Entrée"], "Valider la fenêtre ou le champ en cours"],
     [["Tab"], "Champ suivant (Maj + Tab : précédent)"],
