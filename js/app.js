@@ -1596,8 +1596,8 @@ $("guideBtn").addEventListener("click", showGuide);
 // Pied de page : « Conçu par … » ouvre la fenetre « À propos » (comme les autres applis)
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
-  html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.24</span></div></div>
+  html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#D4A20B"/><g transform="translate(4.56 4.56) scale(.62)" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></g></svg>
+         <div><b>Strate</b><span class="hint">Version 15.25</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -1988,7 +1988,7 @@ function logOut() { writeSession(null); toast("Déconnecté"); renderShared(); r
 function renderAccount() {
   const sess = readSession();
   renderBackupReminder();
-  $("accountState").textContent = sess ? (sess.user?.email || "") : "Lecture seule";
+  $("accountState").textContent = sess ? (nomAffiche(sess.user) || sess.user?.email || "") : "Lecture seule";
   $("accountState").classList.toggle("on", !!sess);
   $("accountBtn").textContent = sess ? "Se déconnecter" : "Se connecter";
 }
@@ -2083,7 +2083,7 @@ function sharedRowHtml(kind, item) {
     : shared.state === "offline" ? `Hors ligne · <button data-sh="sync">Réessayer</button>`
     : `À jour à ${shared.at.toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })} · <button data-sh="sync">Actualiser</button>`;
   const sess = readSession();
-  const who = sess ? `${escapeHtml(sess.user?.email || "")} · <button data-sh="logout">Se déconnecter</button>` : `Lecture seule, sans prix · <button data-sh="login">Se connecter</button>`;
+  const who = sess ? `${escapeHtml(nomAffiche(sess.user) || sess.user?.email || "")} · <button data-sh="logout">Se déconnecter</button>` : `Lecture seule, sans prix · <button data-sh="login">Se connecter</button>`;
   return `<span class="dot ${st}" aria-hidden="true"></span><span class="what">${label}</span>${shared.state === "offline" && st !== "local" ? "" : btns}<span class="sync">${sync} · ${who}</span>`;
 }
 function renderShared() {
@@ -2224,3 +2224,16 @@ document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.
 
 // Bouton « Rechercher » du bandeau : meme recherche que Ctrl+K (ouvre l'Accueil dans un autre onglet)
 document.getElementById("rechercheBtn")?.addEventListener("click", () => window.open("https://outils-hn.github.io/#recherche", "outils-accueil"));
+
+/** « Prénom NOM » d'apres les infos du compte (prenom et nom saisis a la creation), sinon vide : on affiche alors l'email. */
+function nomAffiche(u) {
+  const m = (u && u.user_metadata) || {};
+  const txt = (v) => (typeof v === "string" ? v.trim() : "");
+  const maj = (s) => s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_x, a, b) => a + b.toUpperCase());
+  let prenom = txt(m.first_name), nom = txt(m.last_name);
+  if (!prenom || !nom) {
+    const mots = txt(m.display_name).split(/\s+/).filter(Boolean);
+    if (mots.length >= 2) { prenom = mots.slice(0, -1).join(" "); nom = mots[mots.length - 1]; }
+  }
+  return prenom && nom ? `${maj(prenom)} ${nom.toLocaleUpperCase("fr")}` : "";
+}
