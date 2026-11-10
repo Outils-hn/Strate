@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.18 — 10 novembre 2026
+
+- Nouveauté : Ctrl+K ouvre la recherche de l'Accueil (applis, chantiers, fiches Index, notes Check) dans un nouvel onglet ; le menu des applis propose aussi « Rechercher ».
+
 ## 15.17 — 9 novembre 2026
 
 - Nouveauté : au téléphone, les boutons et menus font 44 px de haut et les liens du pied de page se touchent plus facilement. Les 93 champs du catalogue et des fixations ont maintenant un nom pour les lecteurs d'écran.
