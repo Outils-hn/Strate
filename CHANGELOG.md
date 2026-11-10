@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.22 — 10 novembre 2026
+
+- Nouveauté : le menu des applis suit l'ordre d'usage : Check, Index, Access, puis Trame, Linear, Format, puis les autres.
+
 ## 15.21 — 10 novembre 2026
 
 - Retrait de la ligne « Noter » du menu des applis (menu plus léger). Les boutons « Noter dans Check » des fiches, fournisseurs et éléments restent.
