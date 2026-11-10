@@ -1988,7 +1988,7 @@ function logOut() { writeSession(null); toast("Déconnecté"); renderShared(); r
 function renderAccount() {
   const sess = readSession();
   renderBackupReminder();
-  $("accountState").textContent = sess ? (sess.user?.email || "") : "Lecture seule";
+  $("accountState").textContent = sess ? (nomAffiche(sess.user) || sess.user?.email || "") : "Lecture seule";
   $("accountState").classList.toggle("on", !!sess);
   $("accountBtn").textContent = sess ? "Se déconnecter" : "Se connecter";
 }
@@ -2083,7 +2083,7 @@ function sharedRowHtml(kind, item) {
     : shared.state === "offline" ? `Hors ligne · <button data-sh="sync">Réessayer</button>`
     : `À jour à ${shared.at.toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })} · <button data-sh="sync">Actualiser</button>`;
   const sess = readSession();
-  const who = sess ? `${escapeHtml(sess.user?.email || "")} · <button data-sh="logout">Se déconnecter</button>` : `Lecture seule, sans prix · <button data-sh="login">Se connecter</button>`;
+  const who = sess ? `${escapeHtml(nomAffiche(sess.user) || sess.user?.email || "")} · <button data-sh="logout">Se déconnecter</button>` : `Lecture seule, sans prix · <button data-sh="login">Se connecter</button>`;
   return `<span class="dot ${st}" aria-hidden="true"></span><span class="what">${label}</span>${shared.state === "offline" && st !== "local" ? "" : btns}<span class="sync">${sync} · ${who}</span>`;
 }
 function renderShared() {
@@ -2224,3 +2224,16 @@ document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.
 
 // Bouton « Rechercher » du bandeau : meme recherche que Ctrl+K (ouvre l'Accueil dans un autre onglet)
 document.getElementById("rechercheBtn")?.addEventListener("click", () => window.open("https://outils-hn.github.io/#recherche", "outils-accueil"));
+
+/** « Prénom NOM » d'apres les infos du compte (prenom et nom saisis a la creation), sinon vide : on affiche alors l'email. */
+function nomAffiche(u) {
+  const m = (u && u.user_metadata) || {};
+  const txt = (v) => (typeof v === "string" ? v.trim() : "");
+  const maj = (s) => s.toLowerCase().replace(/(^|[\s'-])(\p{L})/gu, (_x, a, b) => a + b.toUpperCase());
+  let prenom = txt(m.first_name), nom = txt(m.last_name);
+  if (!prenom || !nom) {
+    const mots = txt(m.display_name).split(/\s+/).filter(Boolean);
+    if (mots.length >= 2) { prenom = mots.slice(0, -1).join(" "); nom = mots[mots.length - 1]; }
+  }
+  return prenom && nom ? `${maj(prenom)} ${nom.toLocaleUpperCase("fr")}` : "";
+}

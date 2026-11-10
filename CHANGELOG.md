@@ -7,6 +7,8 @@ Chaque version qui change quelque chose de visible pour l'équipe a une puce « 
 ## 15.25 — 10 novembre 2026
 
 - Nouveauté : le logo en haut à gauche de l'appli est maintenant le même que sur l'Accueil (pastille de couleur et pictogramme).
+- Nouveauté : en haut à droite, le nom s'affiche (Prénom NOM) à la place de l'adresse mail.
+- Nouveauté : un fondu doux quand on passe d'une appli à l'autre ou qu'on revient à l'Accueil (sur les navigateurs récents).
 
 ## 15.24 — 10 novembre 2026
 
