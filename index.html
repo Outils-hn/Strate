@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=15.22">
+<link rel="stylesheet" href="styles.css?v=15.23">
 </head>
 <body>
 <header class="topbar">
@@ -31,7 +31,6 @@
         <div class="apps-menu">
           <div class="apps-label">Mes outils</div>
           <a href="https://outils-hn.github.io/"><span class="sw" style="background:conic-gradient(#C2255C 0 25%,#6D4AFF 0 50%,#0E9F6E 0 75%,#FF4D00 0)"></span><span class="nm">Accueil</span><span class="rl">Toutes les applis, idées &amp; bugs</span></a>
-          <a href="https://outils-hn.github.io/#recherche" target="outils-accueil"><span class="sw ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span><span class="nm">Rechercher</span><span class="rl">Ctrl K · toutes les applis</span></a>
           <div class="apps-sep" role="separator"></div>
           <a href="https://outils-hn.github.io/Check/"><span class="sw" style="background:#4338CA"></span><span class="nm">Check</span><span class="rl">Notes &amp; tâches</span></a>
           <a href="https://outils-hn.github.io/Index/"><span class="sw" style="background:#6D4AFF"></span><span class="nm">Index</span><span class="rl">Fiches techniques</span></a>
@@ -56,6 +55,7 @@
     <button class="pill" id="guideBtn" title="Comment ça marche ?">Guide</button>
     <span class="account-state" id="accountState"></span>
     <button class="pill" id="accountBtn">Se connecter</button>
+    <button class="pill" id="rechercheBtn" type="button" title="Rechercher dans toutes les applis (Ctrl+K)" aria-label="Recherche globale (Ctrl+K)">Rechercher <kbd style="font:11px ui-monospace,monospace;color:var(--muted);border:1px solid var(--line-strong,#d4d4cf);border-radius:4px;padding:0 4px;margin-left:4px">Ctrl K</kbd></button>
     <button class="pill" id="themeBtn" title="Changer de thème"></button>
   </div>
 </header>
@@ -349,7 +349,7 @@
   </div>
 </main>
 
-<footer>Strate v15.22 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a> · <a href="https://outils-hn.github.io/?app=Strate&amp;v=15.9&amp;page=%2FStrate%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Strate v15.23 · <button type="button" id="aboutBtn">Conçu par Hugo N.</button> · 2026 · <a href="#backupCard">Sauvegarde</a> · <a href="https://outils-hn.github.io/?app=Strate&amp;v=15.9&amp;page=%2FStrate%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -365,7 +365,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=15.22"></script>
-<script src="js/app.js?v=15.22"></script>
+<script src="js/core.js?v=15.23"></script>
+<script src="js/app.js?v=15.23"></script>
 </body>
 </html>
