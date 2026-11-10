@@ -1597,7 +1597,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="3" width="2.5" height="16" fill="currentColor"/><rect x="7.5" y="3.75" width="5.5" height="14.5" fill="var(--strate)"/><rect x="14.25" y="3.75" width="4" height="14.5" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-         <div><b>Strate</b><span class="hint">Version 15.20</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.21</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
@@ -2194,12 +2194,6 @@ syncShared();
 // Ctrl+K : ouvre la recherche de l'Accueil dans un autre onglet (on ne quitte pas ce qu'on est en train de faire)
 document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") { e.preventDefault(); window.open("https://outils-hn.github.io/#recherche", "outils-accueil"); } });
 
-// « Noter dans Check » : Check dans un autre onglet, note deja commencee par le numero du chantier choisi dans l'Accueil
-function lienNoter() {
-  const base = "https://outils-hn.github.io/Check/";
-  try { const n = String(JSON.parse(localStorage.getItem("outils-chantier-info") ?? "null")?.numero ?? "").trim(); return n ? `${base}?noter=${encodeURIComponent(`#${n} `)}` : base; } catch { return base; }
-}
-{ const a = document.getElementById("noterCheck"); if (a) a.href = lienNoter(); }
 
 // ---------- Touche « ? » : liste des raccourcis clavier ----------
 (function raccourcisAide() {
