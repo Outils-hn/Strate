@@ -2113,8 +2113,7 @@ const INDEX_KEY = "sb_publishable_yEWGxFFSLTE1lJRXnFUmpg_dMwa6LxW"; // cle PUBLI
 const ficheUrl = id => `${INDEX_URL}/?fiche=${encodeURIComponent(id)}`;
 let fichesIndex = null;
 function chargerFiches() {
-  fichesIndex ??= fetch(`${INDEX_DB}/rest/v1/products?select=id,name,supplier,category,deleted_at&order=name`,
-    { headers: { apikey: INDEX_KEY } })
+  fichesIndex ??= sbFetch("/rest/v1/products?select=id,name,supplier,category,deleted_at&order=name") // avec le jeton du compte (lecture reservee aux comptes valides)
     .then(r => r.ok ? r.json() : Promise.reject(new Error(r.status)))
     .then(rows => rows.filter(r => !r.deleted_at))
     .catch(e => { fichesIndex = null; throw e; });
