@@ -1597,7 +1597,7 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#D4A20B"/><g transform="translate(4.56 4.56) scale(.62)" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></g></svg>
-         <div><b>Strate</b><span class="hint">Version 15.25</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.26</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
          <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
