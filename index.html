@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=15.29">
+<link rel="stylesheet" href="styles.css?v=15.30">
 </head>
 <body>
 <header class="topbar">
@@ -74,17 +74,6 @@
       <select id="productSelect"></select>
     </label>
     <div class="product-name" id="productInfo"></div>
-    <div class="row" style="margin-top:12px; gap:4px">
-      <label class="check-row" style="margin-top:0"><input type="checkbox" id="mixToggle"> Mélanger 2 produits (1re couche côté mur + couches suivantes)</label>
-      <button class="help" data-help="mix" aria-label="Aide">?</button>
-    </div>
-    <div id="mixRow" class="hidden">
-      <label>Couches suivantes
-        <select id="productSelectB"></select>
-      </label>
-      <div class="product-name" id="productInfoB"></div>
-    </div>
-
     <div class="tabs" style="margin-top:14px">
       <button class="tab active" data-mode="combo">Combinaisons</button>
       <button class="tab" data-mode="inverse">Épaisseur la plus proche</button>
@@ -101,6 +90,21 @@
           <option value="3">3</option>
         </select>
       </label>
+    </div>
+    <details class="fold" id="plusOptions">
+      <summary>Plus d'options <span class="meta" id="plusOptionsMeta"></span></summary>
+    <div class="row" style="margin-top:12px; gap:4px">
+      <label class="check-row" style="margin-top:0"><input type="checkbox" id="mixToggle"> Mélanger 2 produits (1re couche côté mur + couches suivantes)</label>
+      <button class="help" data-help="mix" aria-label="Aide">?</button>
+    </div>
+    <div id="mixRow" class="hidden">
+      <label>Couches suivantes
+        <select id="productSelectB"></select>
+      </label>
+      <div class="product-name" id="productInfoB"></div>
+    </div>
+
+      <div class="grid">
       <label class="combo-only"><span class="lbl">Tolérance − (mm) <button class="help" data-help="tolerance" aria-label="Aide">?</button></span>
         <input id="tolMinus" type="text" min="0" value="0" inputmode="numeric">
       </label>
@@ -113,7 +117,8 @@
           <option value="price">Le moins cher</option>
         </select>
       </label>
-    </div>
+      </div>
+    </details>
     <p class="hint" id="typeHint"></p>
   </section>
 
@@ -348,7 +353,7 @@
   </div>
 </main>
 
-<footer>Strate v15.29 · <button type="button" id="aboutBtn">À propos</button> · 2026 · <a href="#backupCard">Sauvegarde</a> · <button type="button" id="raccourcisBtn">Raccourcis</button> · <a href="https://outils-hn.github.io/?app=Strate&amp;v=15.29&amp;page=%2FStrate%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
+<footer>Strate v15.30 · <button type="button" id="aboutBtn">À propos</button> · 2026 · <a href="#backupCard">Sauvegarde</a> · <button type="button" id="raccourcisBtn">Raccourcis</button> · <a href="https://outils-hn.github.io/?app=Strate&amp;v=15.30&amp;page=%2FStrate%2F" target="_blank" rel="noopener noreferrer">Suggestion / bug</a></footer>
 <div class="toast" id="toast"></div>
 <!-- Bon de commande : rempli au moment d'imprimer, visible seulement a l'impression -->
 <div id="printView"></div>
@@ -364,7 +369,7 @@
   </div>
 </div>
 
-<script src="js/core.js?v=15.29"></script>
-<script src="js/app.js?v=15.29"></script>
+<script src="js/core.js?v=15.30"></script>
+<script src="js/app.js?v=15.30"></script>
 </body>
 </html>

@@ -745,7 +745,7 @@ function refreshAll() { renderProductPicker(); renderCatalog(); renderFixCatalog
 
 // ===== Evenements : calcul =====
 $("productSelect").addEventListener("change", e => { state.currentId = e.target.value; refreshAll(); });
-$("mixToggle").addEventListener("change", e => { state.mix.on = e.target.checked; refreshAll(); });
+$("mixToggle").addEventListener("change", e => { state.mix.on = e.target.checked; refreshAll(); majPlusOptions(); });
 $("productSelectB").addEventListener("change", e => { state.mix.outerId = e.target.value; refreshAll(); });
 
 document.querySelectorAll(".tab").forEach(tab => tab.addEventListener("click", () => setMode(tab.dataset.mode)));
@@ -759,10 +759,10 @@ function setMode(m) {
 }
 
 ["target", "maxLayers", "tolMinus", "tolPlus"].forEach(id =>
-  $(id).addEventListener("input", () => { renderResults(); saveState(); })
+  $(id).addEventListener("input", () => { renderResults(); saveState(); majPlusOptions(); })
 );
 $("surface").addEventListener("input", () => { renderSurfaceCalc(); saveState(); });
-$("sortMode").addEventListener("change", () => { renderResults(); saveState(); });
+$("sortMode").addEventListener("change", () => { renderResults(); saveState(); majPlusOptions(); });
 
 $("results").addEventListener("click", e => {
   const btn = e.target.closest("[data-add]");
@@ -1581,7 +1581,7 @@ async function showGuide() {
     const last = i === GUIDE.length - 1;
     const r = await openModal({
       title: GUIDE[i][0],
-      html: `<div class="guide-step">Étape ${i + 1} / ${GUIDE.length}</div>${GUIDE[i][1]}`,
+      html: `${i ? `<div class="guide-step">Étape ${i} / ${GUIDE.length - 1}</div>` : ""}${GUIDE[i][1]}`,
       buttons: [
         ...(last ? [] : [{ label: "Passer", value: "skip", ghost: true }]),
         { label: last ? "C'est parti" : "Suivant", value: "next", primary: true }
@@ -1597,10 +1597,10 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#D4A20B"/><g transform="translate(4.56 4.56) scale(.62)" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></g></svg>
-         <div><b>Strate</b><span class="hint">Version 15.29</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.30</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
-         <p class="hint">Dernière mise à jour : 29 octobre 2026</p>`,
+         <p class="hint">Dernière mise à jour : 14 novembre 2026</p>`,
 }));
 // Menu des applis : se ferme en cliquant ailleurs ou avec Echap
 document.addEventListener("click", e => { const m = $("appsMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
@@ -2163,6 +2163,17 @@ $("productFiche").addEventListener("click", e => {
 
 // ===== Demarrage : on restaure les dernieres saisies =====
 // Remet dans les champs les dernieres saisies (au demarrage et apres une restauration)
+// « Plus d'options » : resume des reglages hors habitude, ouvert d'office si on s'en sert
+function majPlusOptions() {
+  const d = $("plusOptions"); if (!d) return;
+  const mix = $("mixToggle").checked, tm = $("tolMinus").value.trim(), tp = $("tolPlus").value.trim(), prix = $("sortMode").value === "price";
+  const parts = [];
+  if (mix) parts.push("2 produits");
+  if ((tm || "0") !== "0" || (tp || "10") !== "10") parts.push(`tolérance −${tm || 0} / +${tp || 0} mm`);
+  if (prix) parts.push("le moins cher");
+  $("plusOptionsMeta").textContent = parts.join(" · ");
+  if (parts.length && !d.dataset.vu) { d.open = true; d.dataset.vu = "1"; }
+}
 function restoreInputs() {
   const inp = state.inputs || {};
   if (inp.target) $("target").value = inp.target;
@@ -2176,6 +2187,7 @@ function restoreInputs() {
   $("plan").value = inp.plan || "";
   renderSurfaceCalc();
   setMode(inp.mode || "combo");
+  majPlusOptions();
 }
 
 restoreInputs();

@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.30 — 14 novembre 2026
+
+- Nouveauté : l'écran « Calcul » est plus simple. Le produit, l'épaisseur cible et le nombre de couches restent visibles ; « Mélanger 2 produits », les tolérances et le classement sont rangés sous « Plus d'options » (qui s'ouvre tout seul si tu les utilises). Le guide de bienvenue compte maintenant « Étape 1 / 3 » à « 3 / 3 ».
+
 ## 15.29 — 14 novembre 2026
 
 - Nouveauté : le lien « Suggestion / bug » du pied de page transmet maintenant la bonne version de l'appli à l'Accueil.
