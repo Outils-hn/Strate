@@ -65,12 +65,14 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.29 · À propos · 2026 · Sauvegarde · Raccourcis · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.30 · À propos · 2026 · Sauvegarde · Raccourcis · Suggestion / bug", pied);
   await page.getByRole("button", { name: "À propos" }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.29").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.30").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
-  // Saisies
+  // Saisies (les tolerances sont sous « Plus d'options »)
+  await page.locator("#plusOptions > summary").click();
+  verif("« Plus d'options » s'ouvre", await page.locator("#tolPlus").isVisible());
   await taper(page, "target", "221"); await taper(page, "tolPlus", "2,5");
   const r1 = await res(page);
   verif("Tolérance « 2,5 » : plage 221 à 223,5 mm", /221 à 223\.5 mm|221 à 223,5 mm/.test(r1), r1.slice(0, 90));
