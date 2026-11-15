@@ -1597,10 +1597,10 @@ $("guideBtn").addEventListener("click", showGuide);
 $("aboutBtn").addEventListener("click", () => openModal({
   title: "À propos",
   html: `<div class="about-head"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5.5" fill="#D4A20B"/><g transform="translate(4.56 4.56) scale(.62)" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></g></svg>
-         <div><b>Strate</b><span class="hint">Version 15.31</span></div></div>
+         <div><b>Strate</b><span class="hint">Version 15.32</span></div></div>
          <p>Conçu et développé par Hugo N.</p>
          <p class="hint">Combinaisons d'épaisseurs d'isolation, commande par façade et par étage, fixations et bon de commande PDF.</p>
-         <p class="hint">Dernière mise à jour : 14 novembre 2026</p>`,
+         <p class="hint">Dernière mise à jour : 15 novembre 2026</p>`,
 }));
 // Menu des applis : se ferme en cliquant ailleurs ou avec Echap
 document.addEventListener("click", e => { const m = $("appsMenu"); if (m.open && !m.contains(e.target)) m.open = false; });
@@ -1995,9 +1995,8 @@ function renderAccount() {
 $("accountBtn").addEventListener("click", () => { if (readSession()) logOut(); else ensureLogin().then(renderAccount); });
 window.addEventListener("storage", e => { if (e.key === SESSION_KEY) { renderAccount(); renderShared(); } });
 
-// Exports (PDF, copie Excel, sauvegarde) : libres avec un compte ; sans compte, 3 exports de decouverte
-// puis connexion demandee. Incitation seulement (compteur dans le navigateur).
-const FREE_EXPORTS = 3, FREE_KEY = "outils.strate.exports";
+// Exports (PDF, copie Excel, sauvegarde) : reserves aux comptes connectes (l'appli est deja protegee par la garde commune ;
+// ceci est un filet de securite si la session disparait en cours d'utilisation). Sans compte, la connexion est demandee.
 // Fichier JSON (sauvegarde / restauration) : export ET import reserves aux comptes connectes.
 function jsonAllowed() {
   if (readSession()) return true;
@@ -2006,14 +2005,6 @@ function jsonAllowed() {
 }
 async function allowExport() {
   if (readSession()) return true;
-  let done = 0;
-  try { done = Number(localStorage.getItem(FREE_KEY)) || 0; } catch (e) {}
-  if (done < FREE_EXPORTS) {
-    try { localStorage.setItem(FREE_KEY, String(done + 1)); } catch (e) {}
-    toast(`Export gratuit ${done + 1}/${FREE_EXPORTS} · connecte-toi pour des exports illimités`);
-    return true;
-  }
-  toast("Les 3 exports de découverte sont utilisés : connecte-toi pour continuer");
   const ok = await ensureLogin();
   renderAccount();
   return ok;
