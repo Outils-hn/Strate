@@ -59,7 +59,7 @@ await step("Ecran principal", async () => {
   await page.screenshot({ path: `${OUT}/01-strate.png`, fullPage: true });
   await page.locator("#appsMenu summary").click(); await page.waitForTimeout(150);
   const applis = (await page.locator(".apps-menu a .nm").allInnerTexts()).join(", ");
-  verif("Selecteur : Accueil + 11 applis dans l'ordre", applis === "Accueil, Check, Index, Access, Trame, Linear, Format, Joint, Maquette, Masse, Membrane, Strate", applis);
+  verif("Selecteur : Accueil + 11 applis dans l'ordre", applis === "Accueil, Check, Index, Access, Trame, Linear, Format, Joint, Masse, Membrane, Strate, Maquette", applis);
   const lignes = await page.locator(".apps-menu a").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
   verif("Selecteur : chaque ligne tient sur une seule ligne (meme hauteur)", Math.max(...lignes) - Math.min(...lignes) < 2, lignes.join(","));
   await page.screenshot({ path: `${OUT}/02-selecteur.png` });
