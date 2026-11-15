@@ -1,6 +1,9 @@
 /* Strate - styles (V14 : style « Epure » de la famille Format, Index, Linear, Masse, Trame)
    Blanc casse, encre presque noire, cartes blanches a fin filet, titres en petites capitales.
    Couleur propre a Strate : le jaune laine de verre (logo, couches dessinees, recommandee). */
+/* Polices Geist embarquees (licence OFL, voir fonts/OFL.txt) : plus de dependance a Google Fonts. */
+@font-face { font-family: "Geist"; src: url("fonts/Geist-wght.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("fonts/GeistMono-wght.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 :root {
   --bg: #fbfbfa;
   --surface: #ffffff;
