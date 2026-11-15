@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.33 — 15 novembre 2026
+
+- Nouveauté : les polices de l'appli sont maintenant embarquées : l'aspect ne dépend plus d'un site extérieur et l'appli s'affiche pareil même avec un réseau très lent.
+
 ## 15.32 — 15 novembre 2026
 
 - Nouveauté : les « 3 exports gratuits » sans compte disparaissent : l'appli étant réservée aux comptes de l'équipe, ils ne servaient plus. Si la session se perd en cours d'utilisation, la connexion est demandée avant d'exporter.
