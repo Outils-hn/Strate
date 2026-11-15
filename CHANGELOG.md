@@ -4,6 +4,10 @@ Les versions anciennes n'ont pas de date : elles viennent du journal tenu jusqu'
 
 Chaque version qui change quelque chose de visible pour l'équipe a une puce « Nouveauté : … », en langage courant : c'est la seule phrase affichée sur la page « Nouveautés » de l'Accueil.
 
+## 15.32 — 15 novembre 2026
+
+- Nouveauté : les « 3 exports gratuits » sans compte disparaissent : l'appli étant réservée aux comptes de l'équipe, ils ne servaient plus. Si la session se perd en cours d'utilisation, la connexion est demandée avant d'exporter.
+
 ## 15.31 — 15 novembre 2026
 
 - Nouveauté : le menu des applis propose maintenant Maquette (visionneuse de maquettes IFC). Les boutons « Supprimer » (commande, produit, système de fixation) ressemblent maintenant aux autres boutons au lieu d'un simple texte.

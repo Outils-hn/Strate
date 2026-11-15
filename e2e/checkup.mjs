@@ -65,9 +65,9 @@ await step("Ecran principal", async () => {
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
-  verif("Pied de page", pied === "Strate v15.31 · À propos · 2026 · Sauvegarde · Raccourcis · Suggestion / bug", pied);
+  verif("Pied de page", pied === "Strate v15.32 · À propos · 2026 · Sauvegarde · Raccourcis · Suggestion / bug", pied);
   await page.getByRole("button", { name: "À propos" }).click(); await page.waitForTimeout(200);
-  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.31").isVisible());
+  verif("Fenetre À propos", await page.locator("#modal").getByText("Version 15.32").isVisible());
   await page.keyboard.press("Escape"); await page.waitForTimeout(150);
 
   // Saisies (les tolerances sont sous « Plus d'options »)
@@ -150,11 +150,10 @@ await step("Catalogue commun", async () => {
   await c.close();
 });
 
-await step("Comptes : bandeau et 3 exports gratuits", async () => {
+await step("Comptes : bandeau, sauvegarde refusee sans compte, connexion", async () => {
   const { c, page } = await ctx();
   await page.waitForTimeout(500);
   verif("Bandeau : seulement Se connecter (pas de « Lecture seule »)", await page.locator("#accountState").innerText() === "" && await page.locator("#accountBtn").innerText() === "Se connecter");
-  await page.evaluate(() => localStorage.setItem("outils.strate.exports", "3"));
   await page.locator("#backupBtn").scrollIntoViewIfNeeded();
   const [dlSans] = await Promise.all([page.waitForEvent("download", { timeout: 1500 }).catch(() => null), page.locator("#backupBtn").click()]);
   await page.waitForTimeout(300);
