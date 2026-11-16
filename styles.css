@@ -477,3 +477,7 @@ main { max-width: 1440px; padding-left: 32px; padding-right: 32px; }
 @keyframes vt-in { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }
 .account-state:empty { display: none; }
+
+/* Coupes de ligne soignees : pas de mot isole en fin de phrase, titres equilibres */
+p, li, dd, figcaption, .hint, .note, .vide { text-wrap: pretty; }
+h1, h2, h3, h4 { text-wrap: balance; }
