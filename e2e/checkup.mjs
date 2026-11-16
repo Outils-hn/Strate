@@ -1,6 +1,7 @@
 // Check-up automatique de Strate dans un vrai navigateur (donnees du navigateur vierges).
 // Resultat : checkup.txt (OK / ECHEC) + captures d'ecran et bon de commande PDF.
 import { chromium } from "playwright";
+import { detailsVisuels } from "./details.mjs";
 import AxeBuilder from "@axe-core/playwright";
 import { mkdirSync, writeFileSync } from "node:fs";
 
@@ -8,6 +9,7 @@ const BASE = process.env.APP_URL ?? "http://127.0.0.1:8090/";
 const OUT = process.argv[2] ?? "captures";
 mkdirSync(OUT, { recursive: true });
 const lignes = [];
+const lignesDetails = lignes;
 const verif = (nom, ok, detail = "") => lignes.push(`${ok ? "OK    " : "ECHEC "} ${nom}${detail ? ` (${detail})` : ""}`);
 const step = async (nom, fn) => { try { await fn(); } catch (e) { verif(nom, false, e.message.split("\n")[0].slice(0, 180)); } };
 const browser = await chromium.launch();
@@ -56,13 +58,13 @@ const taper = async (page, id, v) => { await page.fill(`#${id}`, ""); await page
 
 await step("Ecran principal", async () => {
   const { c, page, etat } = await ctx();
-  await page.screenshot({ path: `${OUT}/01-strate.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/01-strate.png`, fullPage: true }); await detailsVisuels(page, "01-strate.png", lignesDetails);
   await page.locator("#appsMenu summary").click(); await page.waitForTimeout(150);
   const applis = (await page.locator(".apps-menu a .nm").allInnerTexts()).join(", ");
   verif("Selecteur : Accueil + 11 applis dans l'ordre", applis === "Accueil, Check, Index, Access, Trame, Linear, Format, Joint, Masse, Membrane, Strate, Maquette", applis);
   const lignes = await page.locator(".apps-menu a").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height));
   verif("Selecteur : chaque ligne tient sur une seule ligne (meme hauteur)", Math.max(...lignes) - Math.min(...lignes) < 2, lignes.join(","));
-  await page.screenshot({ path: `${OUT}/02-selecteur.png` });
+  await page.screenshot({ path: `${OUT}/02-selecteur.png` }); await detailsVisuels(page, "02-selecteur.png", lignesDetails);
   await page.keyboard.press("Escape");
   verif("Menu ferme avec Echap", !(await page.locator("#appsMenu").evaluate((d) => d.open)));
   const pied = (await page.locator("footer").innerText()).replace(/\s+/g, " ").trim();
@@ -89,7 +91,7 @@ await step("Ecran principal", async () => {
   const r4 = await res(page);
   verif("Cible « 1'200 » lue 1200", /1200 mm, c'est plus|maximum faisable/.test(r4), r4.slice(0, 80));
   await taper(page, "target", "220");
-  await page.screenshot({ path: `${OUT}/03-combinaisons.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/03-combinaisons.png`, fullPage: true }); await detailsVisuels(page, "03-combinaisons.png", lignesDetails);
 
   // Commande
   await taper(page, "surface", "-10");
@@ -116,7 +118,7 @@ await step("Ecran principal", async () => {
   await page.locator("#modal").getByRole("button", { name: "Annuler" }).click().catch(() => page.keyboard.press("Escape")); await page.waitForTimeout(200);
   await taper(page, "surface", "12,5*3,2+8");
   verif("Champ de commande nommé", (await page.locator("#orderSelect").getAttribute("aria-label")) === "Commande en cours");
-  await page.screenshot({ path: `${OUT}/04-commande.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/04-commande.png`, fullPage: true }); await detailsVisuels(page, "04-commande.png", lignesDetails);
   const [dl] = await Promise.all([page.waitForEvent("download", { timeout: 20000 }), page.click("#pdfBtn")]);
   await dl.saveAs(`${OUT}/bon.pdf`);
   verif("Bon de commande PDF telecharge", /\.pdf$/.test(dl.suggestedFilename()), dl.suggestedFilename());
@@ -145,7 +147,7 @@ await step("Catalogue commun", async () => {
   const envoye = rpc.indexOf("strate_save_item") > rpc.lastIndexOf("strate_lire");
   verif("Après connexion : catalogue relu avant l'envoi (prix jamais écrasés)", envoye, rpc.join(", "));
   verif("Envoi à l'équipe avec le compte", rpc.includes("strate_save_item") && (await page.locator("#sharedProduct").getByText("Commun à l'équipe").isVisible()), rpc.join(", "));
-  await page.screenshot({ path: `${OUT}/06-catalogue-commun.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/06-catalogue-commun.png`, fullPage: true }); await detailsVisuels(page, "06-catalogue-commun.png", lignesDetails);
   await page.selectOption("#catalogProductSelect", { index: 0 }); await page.waitForTimeout(200);
   verif("Produit de ce poste : bouton « Partager avec l'équipe »", await page.locator("#sharedProduct").getByRole("button", { name: "Partager avec l'équipe" }).isVisible());
   await c.close();
@@ -182,7 +184,7 @@ await step("Lien vers une fiche Index", async () => {
   const href = await page.locator("#productFiche a").getAttribute("href");
   verif("Fiche Index liée au produit", href === "https://outils-hn.github.io/Index/?fiche=fiche-iso", href ?? "");
   verif("Lien aussi visible dans le calcul", await page.locator("#productInfo a").isVisible());
-  await page.screenshot({ path: `${OUT}/07-lien-index.png`, fullPage: false });
+  await page.screenshot({ path: `${OUT}/07-lien-index.png`, fullPage: false }); await detailsVisuels(page, "07-lien-index.png", lignesDetails);
   await c.close();
 });
 
@@ -197,7 +199,7 @@ await step("Catalogue commun hors ligne", async () => {
 await step("Mode sombre", async () => {
   const { c, page } = await ctx({ dark: true });
   verif("Mode sombre retenu", (await page.evaluate(() => document.documentElement.dataset.theme)) === "dark");
-  await page.screenshot({ path: `${OUT}/05-sombre.png`, fullPage: true });
+  await page.screenshot({ path: `${OUT}/05-sombre.png`, fullPage: true }); await detailsVisuels(page, "05-sombre.png", lignesDetails);
   await c.close();
 });
 
